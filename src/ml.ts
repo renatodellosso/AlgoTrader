@@ -1,12 +1,11 @@
 import yahooFinance from "yahoo-finance2";
-import { NeuralNetwork, NeuralNetworkGPU, recurrent } from "brain.js";
+import { NeuralNetwork } from "brain.js";
 import {
   INeuralNetworkData,
   INeuralNetworkDatum,
   INeuralNetworkTrainOptions,
 } from "brain.js/dist/neural-network";
 import { INeuralNetworkOptions } from "brain.js/dist/neural-network-types";
-import { INumberHash } from "brain.js/dist/lookup";
 
 interface IData
   extends INeuralNetworkDatum<
@@ -17,6 +16,7 @@ interface IData
 async function main() {
   const end = new Date();
   const start = new Date();
+  // start.setDate(end.getDate() - 150);
   start.setFullYear(end.getFullYear() - 5);
 
   const fetchedData = await yahooFinance.chart("AAPL", {
@@ -26,7 +26,7 @@ async function main() {
   });
 
   // Input length must always be the same
-  const prevDaysConsidered = 10;
+  const prevDaysConsidered = 3;
   const trainingRatio = 0.9;
 
   // Generate training set
@@ -46,33 +46,30 @@ async function main() {
     const prices = quotes.map((quote) => quote.close! / quote.open! - 0.5);
     prices.push(quote.open! / quotes[quotes.length - 1].close! - 0.5);
 
-    const volumes = quotes.map((quote) => quote.volume!);
+    // const volumes = quotes.map((quote) => quote.volume!);
 
-    const input: INumberHash = {};
-    for (let i = 0; i < prices.length; i++) {
-      const price = prices[i];
-      input[i.toString()] = price;
-    }
-    for (let i = 0; i < volumes.length; i++) {
-      const volume = volumes[i];
-      input[`${i.toString()}-volume`] = volume;
-    }
+    // const input: INumberHash = {};
+    // for (let i = 0; i < prices.length; i++) {
+    //   const price = prices[i];
+    //   input[i.toString()] = price;
+    // }
+    // for (let i = 0; i < volumes.length; i++) {
+    //   const volume = volumes[i];
+    //   input[`${i.toString()}-volume`] = volume;
+    // }
 
     trainingData.push({
       input: prices,
-      output: { change: quote.close! / quote.open! - 0.5 },
+      output: [quote.close! / quote.open! - 0.5],
     });
   }
 
   const netConfig: Partial<INeuralNetworkOptions & INeuralNetworkTrainOptions> =
     {
-      iterations: 20000,
-      learningRate: 0.6,
-      errorThresh: 0.0002,
-      hiddenLayers: [7],
-      activation: "leaky-relu",
+      iterations: 2000000,
+      errorThresh: 0.0001,
       log: true,
-      logPeriod: 2500,
+      logPeriod: 10000,
     };
 
   const net = new NeuralNetwork(netConfig);
@@ -93,27 +90,25 @@ async function main() {
     if (quote.date.getDay() === 0 || quote.date.getDay() === 6) continue;
 
     const quotes = fetchedData.quotes.slice(i - prevDaysConsidered, i);
-    const prices = quotes.map((quote) => quote.close!);
-    prices.push(quote.open!);
+    const prices = quotes.map((quote) => quote.close! / quote.open! - 0.5);
+    prices.push(quote.open! / quotes[quotes.length - 1].close! - 0.5);
 
-    const volumes = quotes.map((quote) => quote.volume!);
+    // const volumes = quotes.map((quote) => quote.volume!);
 
-    const input: INumberHash = {};
-    for (let i = 0; i < prices.length; i++) {
-      const price = prices[i];
-      input[i.toString()] = price;
-    }
-    for (let i = 0; i < volumes.length; i++) {
-      const volume = volumes[i];
-      input[`${i.toString()}-volume`] = volume;
-    }
+    // const input: INumberHash = {};
+    // for (let i = 0; i < prices.length; i++) {
+    //   const price = prices[i];
+    //   input[i.toString()] = price;
+    // }
+    // for (let i = 0; i < volumes.length; i++) {
+    //   const volume = volumes[i];
+    //   input[`${i.toString()}-volume`] = volume;
+    // }
 
-    const predicted = net.run(prices) as any;
+    const predicted = net.run(prices) as any as number;
 
     console.log(
-      `Actual: ${quote.close! / quote.open! - 0.5}, predicted: ${
-        predicted.change
-      }`
+      `Actual: ${quote.close! / quote.open! - 1}, predicted: ${predicted - 0.5}`
     );
   }
 }
