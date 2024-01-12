@@ -1,5 +1,5 @@
 import yahooFinance from "yahoo-finance2";
-import { NeuralNetwork, recurrent } from "brain.js";
+import { NeuralNetwork, NeuralNetworkGPU, recurrent } from "brain.js";
 import {
   INeuralNetworkData,
   INeuralNetworkDatum,
@@ -17,7 +17,7 @@ interface IData
 async function main() {
   const end = new Date();
   const start = new Date();
-  start.setFullYear(end.getFullYear() - 1);
+  start.setFullYear(end.getFullYear() - 5);
 
   const fetchedData = await yahooFinance.chart("AAPL", {
     period1: start.toDateString(),
@@ -26,8 +26,8 @@ async function main() {
   });
 
   // Input length must always be the same
-  const prevDaysConsidered = 4;
-  const trainingRatio = 0.90;
+  const prevDaysConsidered = 10;
+  const trainingRatio = 0.9;
 
   // Generate training set
   const trainingData: IData[] = [];
@@ -46,10 +46,16 @@ async function main() {
     const prices = quotes.map((quote) => quote.close! / quote.open! - 0.5);
     prices.push(quote.open! / quotes[quotes.length - 1].close! - 0.5);
 
+    const volumes = quotes.map((quote) => quote.volume!);
+
     const input: INumberHash = {};
     for (let i = 0; i < prices.length; i++) {
       const price = prices[i];
       input[i.toString()] = price;
+    }
+    for (let i = 0; i < volumes.length; i++) {
+      const volume = volumes[i];
+      input[`${i.toString()}-volume`] = volume;
     }
 
     trainingData.push({
@@ -60,15 +66,20 @@ async function main() {
 
   const netConfig: Partial<INeuralNetworkOptions & INeuralNetworkTrainOptions> =
     {
-      iterations: 50000,
+      iterations: 20000,
       learningRate: 0.6,
       errorThresh: 0.0002,
+      hiddenLayers: [7],
+      activation: "leaky-relu",
       log: true,
-      logPeriod: 10000,
+      logPeriod: 2500,
     };
 
   const net = new NeuralNetwork(netConfig);
+
+  console.log("Starting training...");
   net.train(trainingData as any, netConfig);
+  console.log("Training finished!");
 
   // Try out the network
   for (
@@ -84,6 +95,18 @@ async function main() {
     const quotes = fetchedData.quotes.slice(i - prevDaysConsidered, i);
     const prices = quotes.map((quote) => quote.close!);
     prices.push(quote.open!);
+
+    const volumes = quotes.map((quote) => quote.volume!);
+
+    const input: INumberHash = {};
+    for (let i = 0; i < prices.length; i++) {
+      const price = prices[i];
+      input[i.toString()] = price;
+    }
+    for (let i = 0; i < volumes.length; i++) {
+      const volume = volumes[i];
+      input[`${i.toString()}-volume`] = volume;
+    }
 
     const predicted = net.run(prices) as any;
 
