@@ -24,15 +24,26 @@ def graphChange(predictedPrice: numpy.ndarray, realPrice = numpy.ndarray) -> Non
     plt.legend()
     plt.show()
 
-def graphTest(predictedPrice: numpy.ndarray, realPrice: numpy.ndarray, actionsX: list, actionsY: list, actionsC: list) -> None:
+def graphTest(predictedPrice: numpy.ndarray, realPrice: numpy.ndarray, netWorth: list, \
+        actionsX: list = [], actionsY: list = [], actionsC: list = []) -> None:
     # Convert predictedPrices and realPrices to 1D arrays
     predictedPrice = predictedPrice.flatten()
     realPrice = realPrice.flatten()
 
+    # Calculate difference between netWorth and realPrice
+    netWorthDiff = numpy.array(netWorth)
+    netWorthDiff = netWorthDiff.flatten()
+    netWorthDiff -= realPrice
+
+    zero = [0] * len(realPrice)
+
     # Plot results
     print("Plotting results...")
     plt.plot(realPrice, color='black', label='Real Price')
-    plt.plot(predictedPrice, color='green', label='Predicted Price')
+    plt.plot(predictedPrice, color='yellow', label='Predicted Price')
+    plt.plot(netWorth, color='blue', label='Net Worth')
+    plt.plot(netWorthDiff, color='red', label='Net Worth Diff')
+    plt.plot(zero, color='black', label='Zero')
     plt.scatter(actionsX, actionsY, color=actionsC, label='Actions')
     plt.title('Algo Trade Test Results')
     plt.xlabel('Time')
