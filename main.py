@@ -1,23 +1,15 @@
 import pandas
 import yfinance
+from api import getBalance, getSecurity, placeBuyOrder
 from training import train
-from testing import test
+from testing import test, predictTomorrow
+from trading import startLoop
 
-# Read environment variables
-envFile = open(".env", "r")
-
-for line in envFile:
-    splitLine = line.split("=")
-    if splitLine[0] == "ALPACA_ID":
-        alpacaId = splitLine[1].strip()
-    elif splitLine[0] == "ALPACA_SECRET":
-        alpacaSecret = splitLine[1].strip()
-
-envFile.close()
+startLoop()
 
 timesteps = 40 # 40 works well
 days = 365 * 10 # 10 years works well
-trainingRatio = 0.8 # What % of data to use for training, 0.8 is standard
+trainingRatio = 1 # What % of data to use for training, 0.8 is standard
 offsetDays = 0
 symbol = "BAC" # Symbols with 20% - 30% returns over 5Y seem to work best, such as KO, CVX, PM, BAC (v. well!), INTC, WFC (v. well!)
 
@@ -41,4 +33,6 @@ print("Data length: " + str(len(data)))
 model = train(data[:int(len(data) * trainingRatio)], timesteps)
 
 # Test model
-test(model, data[int(len(data) * trainingRatio):], timesteps)
+# test(model, data[int(len(data) * trainingRatio):], timesteps)
+
+print("Predicted Tmr:", predictTomorrow(model, data, timesteps))
