@@ -85,7 +85,7 @@ def algoTrade(predictedPrices: numpy.ndarray, realPrices: numpy.ndarray, timeste
     print("Annualized Return:", round(annualizedReturn * 100, 2), "%")
 
     # Remove the part before we begin trading
-    predictedPrices = predictedPrices[timesteps:]
-    realPrices = realPrices[timesteps:]
+    # predictedPrices = predictedPrices[timesteps:]
+    # realPrices = realPrices[timesteps:]
 
-    graphTest(predictedPrices, realPrices, netWorth)
+    # # graphTest(predictedPrices, realPrices, netWorth)
