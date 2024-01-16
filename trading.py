@@ -5,11 +5,12 @@ from pandas import DataFrame
 import pandas
 import yfinance
 from api import getBalance, getPosition, placeBuyOrder, placeSellOrder
-from testing import predictTomorrow
+from testing import predictToday, predictTomorrow
 
 from training import train
 
 def startLoop() ->  None:
+    print("Starting trading loop...")
     while True:
         # Check if time is between 9:30AM and 4PM
         now = datetime.datetime.now()
@@ -60,13 +61,15 @@ def dailyTrade() -> None:
     # Train model
     model = train(data, 40)
 
-    # Get predicted price for tomorrow
-    predictedPrice = predictTomorrow(model, data, 40)
+    # Get predicted prices
+    predictedPriceToday = predictToday(model, data, 40)
+    predictedPriceTmr = predictTomorrow(model, data, 40)
     print("Today's price:", todayPrice)
-    print("Predicted price:", predictedPrice)
+    print("Predicted price for today:", predictedPriceToday)
+    print("Predicted price for tomorrow:", predictedPriceTmr)
 
     # Calculate difference
-    difference = predictedPrice - todayPrice
+    difference = predictedPriceTmr - predictedPriceToday
     print("Difference:", difference)
 
     # Get account balance and position
@@ -78,7 +81,7 @@ def dailyTrade() -> None:
     # If difference is positive, buy
     if(balance > 0 and difference > 0):
         # Buy
-        shares = int(balance / todayPrice)
+        shares = balance / todayPrice
         print("Buying", shares, "shares...")
         placeBuyOrder(symbol, shares)
     # If difference is negative, sell

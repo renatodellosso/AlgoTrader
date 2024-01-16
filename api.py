@@ -10,21 +10,26 @@ from env import alpacaId, alpacaSecret
 print("Initializing Alpaca client...")
 tradingClient = TradingClient(alpacaId, alpacaSecret, paper=True)
 
-def getBalance() -> int:
-    return int(tradingClient.get_account().cash)
+def getBalance() -> float:
+    return float(tradingClient.get_account().cash)
 
-def getPosition(symbol: str) -> int:
+def getPosition(symbol: str) -> float:
     allPositions = tradingClient.get_all_positions()
     for position in allPositions:
         if(position.symbol == symbol):
-            return int(position.qty)
+            return float(position.qty)
     return 0
 
 def getSecurity(symbol: str) -> Asset | RawData:
     return tradingClient.get_asset(symbol)
 
-def placeBuyOrder(symbol: str, shares: int) -> bool:
+def placeBuyOrder(symbol: str, shares: float) -> bool:
     print("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
+
+    # Check if shares is valid
+    if(shares <= 0):
+        print("Invalid number of shares!")
+        return False
 
     # Check if we can trade this security
     security = getSecurity(symbol)
@@ -58,8 +63,12 @@ def placeBuyOrder(symbol: str, shares: int) -> bool:
     print("Order placed!")
     return True
 
-def placeSellOrder(symbol: str, shares: int) -> bool:
+def placeSellOrder(symbol: str, shares: float) -> bool:
     print("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
+
+    if(shares <= 0):
+        print("Invalid number of shares!")
+        return False
 
     security = getSecurity(symbol)
     if(not security.tradable):
