@@ -9,6 +9,9 @@ from testing import predictToday, predictTomorrow
 
 from training import train
 
+symbols = ["KO", "CVX", "PM", "INTC", "WFC", "BAC"]
+days = 365 * 10 # 10 years works well
+
 def startLoop() ->  None:
     print("Starting trading loop...")
     while True:
@@ -32,9 +35,7 @@ def startLoop() ->  None:
         print("Sleeping for 1 hour...")
         time.sleep(3600)
 
-def getData(symbol: str) -> DataFrame:
-    days = 365 * 10 # 10 years works well
-    
+def getData(symbol: str) -> DataFrame:    
     # Get historical data
     today = pandas.Timestamp.today()
     start_date = today - pandas.Timedelta(days=days)
@@ -48,10 +49,52 @@ def getData(symbol: str) -> DataFrame:
     return data
 
 def dailyTrade() -> None:
-    print("Starting daily trade...")
+    expectedChanges = {}
 
-    symbol = "BAC" # Symbols with 20% - 30% returns over 5Y seem to work best, such as KO, CVX, PM, BAC (v. well!), INTC, WFC (v. well!)
+    for symbol in symbols:
+        expectedChanges[symbol] = getExpectedChange(symbol)
 
+    print("Expected changes:")
+    print(expectedChanges)
+
+    # Sell symbols where expected change is < 0
+    for symbol in symbols:
+        if expectedChanges[symbol] < 0:
+            # Sell
+            shares = getPosition(symbol)
+            if shares > 0:
+                print("Selling", shares, "shares of", symbol, "...")
+                placeSellOrder(symbol, shares)
+
+    # Remove symbols where expected change is < 0 from expectedChanges
+    for symbol in symbols:
+        if expectedChanges[symbol] < 0:
+            expectedChanges.pop(symbol)
+
+    # Calculate total expected change
+    totalExpectedChange = 0
+    for symbol in expectedChanges:
+        totalExpectedChange += expectedChanges[symbol]
+
+    # Convert expected changes to percentages of total
+    for symbol in expectedChanges:
+        expectedChanges[symbol] = expectedChanges[symbol] / totalExpectedChange
+
+    print("Expected changes (% of total):")
+    print(expectedChanges)
+
+    # Buy symbols where expected change is > 0
+    balance = getBalance()
+    print("Balance:", balance)
+    for symbol in expectedChanges:
+        # Buy
+        if balance > 0:
+            shares = balance * expectedChanges[symbol] / yfinance.Ticker(symbol).info['regularMarketOpen']
+            shares = shares[0] # Not sure how it's ending up as an array
+            print("Buying", shares, "shares of", symbol, ".. .")
+            placeBuyOrder(symbol, shares)
+
+def getExpectedChange(symbol: str) -> float:
     # Get data
     data = getData(symbol)
 
@@ -59,6 +102,7 @@ def dailyTrade() -> None:
     todayPrice = data.iloc[-1]['Close']
 
     # Train model
+    print("Training model for " + symbol + "...")
     model = train(data, 40)
 
     # Get predicted prices
@@ -72,24 +116,4 @@ def dailyTrade() -> None:
     difference = predictedPriceTmr - predictedPriceToday
     print("Difference:", difference)
 
-    # Get account balance and position
-    balance = getBalance()
-    print("Balance:", balance)
-    position = getPosition(symbol)
-    print("Position:", position)
-
-    # If difference is positive, buy
-    if(balance > 0 and difference > 0):
-        # Buy
-        shares = balance / todayPrice
-        print("Buying", shares, "shares...")
-        placeBuyOrder(symbol, shares)
-    # If difference is negative, sell
-    elif(position > 0 and difference < 0):
-        # Sell
-        shares = position
-        print("Selling", shares, "shares...")
-        placeSellOrder(symbol, shares)
-    else:
-        print("Holding.")
-
+    return difference / predictedPriceToday

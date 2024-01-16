@@ -38,7 +38,7 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
         return False
     
     # Fetch the price from yfinance
-    price = int(yfinance.Ticker(symbol).info['ask'])
+    price = float(yfinance.Ticker(symbol).info['ask'])
 
     orderCost = price * shares
     print("Order cost: $" + str(round(orderCost, 2)) + " ($" + str(round(price, 2)) + " * " + str(shares) + ")")
@@ -55,7 +55,8 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     
     # Generate order data
     # GTC is Good Til Cancelled
-    orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.BUY, time_in_force=TimeInForce.GTC)
+    # We use DAY so we can have fractional orders
+    orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.BUY, time_in_force=TimeInForce.DAY)
 
     # Submit order
     tradingClient.submit_order(orderData)
@@ -90,7 +91,8 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
 
     # Generate order data
     # GTC is Good Til Cancelled
-    orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.SELL, time_in_force=TimeInForce.GTC)
+    # We use DAY so we can have fractional orders
+    orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.SELL, time_in_force=TimeInForce.DAY)
 
     # Submit order
     tradingClient.submit_order(orderData)
