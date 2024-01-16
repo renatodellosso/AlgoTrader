@@ -3,6 +3,18 @@ import yfinance
 from training import train
 from testing import test
 
+# Read environment variables
+envFile = open(".env", "r")
+
+for line in envFile:
+    splitLine = line.split("=")
+    if splitLine[0] == "ALPACA_ID":
+        alpacaId = splitLine[1].strip()
+    elif splitLine[0] == "ALPACA_SECRET":
+        alpacaSecret = splitLine[1].strip()
+
+envFile.close()
+
 timesteps = 40 # 40 works well
 days = 365 * 10 # 10 years works well
 trainingRatio = 0.8 # What % of data to use for training, 0.8 is standard
