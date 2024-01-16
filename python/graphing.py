@@ -35,6 +35,8 @@ def graphTest(predictedPrice: numpy.ndarray, realPrice: numpy.ndarray, netWorth:
     netWorthDiff = netWorthDiff.flatten()
     netWorthDiff -= realPrice
 
+    # Create reference lines
+    startPrice = [realPrice[0]] * len(realPrice)
     zero = [0] * len(realPrice)
 
     # Plot results
@@ -44,6 +46,7 @@ def graphTest(predictedPrice: numpy.ndarray, realPrice: numpy.ndarray, netWorth:
     plt.plot(netWorth, color='blue', label='Net Worth')
     plt.plot(netWorthDiff, color='red', label='Net Worth Diff')
     plt.plot(zero, color='black', label='Zero')
+    plt.plot(startPrice, color='black', label='Initial Price')
     plt.scatter(actionsX, actionsY, color=actionsC, label='Actions')
     plt.title('Algo Trade Test Results')
     plt.xlabel('Time')

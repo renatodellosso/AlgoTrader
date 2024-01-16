@@ -1,7 +1,37 @@
 import numpy
+import pandas
+from keras import Sequential
+from sklearn.preprocessing import MinMaxScaler
 from graphing import graphTest
 
-def test(predictedPrices: numpy.ndarray, realPrices: numpy.ndarray, timesteps: int) -> None:
+def test(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> None:
+    print("Preparing to test model...")
+    print(type(data))
+    realPrice = data.iloc[:, 1:2].values
+    datasetTotal = data["Close"]
+    inputs = datasetTotal.values
+
+    inputs = inputs.reshape(-1, 1) # param1 is number of rows, param2 is size of each row
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    inputs = scaler.fit_transform(inputs)
+
+    xTest = [[0] * timesteps] * timesteps
+    for i in range(timesteps, len(inputs)):
+        xTest.append(inputs[i - timesteps:i, 0])
+
+    xTest = numpy.array(xTest)
+    xTest = numpy.reshape(xTest, (xTest.shape[0], xTest.shape[1], 1))
+
+    # xTest is a 3D array
+
+    # Predict
+    print("Predicting...")  
+    predictedPrice = model.predict(xTest)
+    predictedPrice = scaler.inverse_transform(predictedPrice)
+
+    algoTrade(predictedPrice, realPrice, timesteps)
+
+def algoTrade(predictedPrices: numpy.ndarray, realPrices: numpy.ndarray, timesteps: int) -> None:
     # Convert predictedPrices and realPrices to 1D arrays
     predictedPrices = predictedPrices.flatten()
     realPrices = realPrices.flatten()
@@ -41,11 +71,17 @@ def test(predictedPrices: numpy.ndarray, realPrices: numpy.ndarray, timesteps: i
     profit = (money - realPrices[timesteps - 1]) / realPrices[timesteps - 1]
     holdProfit = (realPrices[-1] - realPrices[timesteps - 1]) / realPrices[timesteps - 1]
 
+    # Calculate annualized return
+    days = len(realPrices) - timesteps
+    years = days / 365
+    annualizedReturn = (1 + profit) ** (1 / years) - 1
+
     print("Shares: ", shares)
     print("Money: ", money)
     print("Final Share Price: ", realPrices[-1])
     print("Profit:", round(profit * 100, 2), "%")
     print("Holding Profit:", round(holdProfit * 100, 2), "%")
+    print("Annualized Return:", round(annualizedReturn * 100, 2), "%")
 
     # Remove the part before we begin trading
     predictedPrices = predictedPrices[timesteps:]

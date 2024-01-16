@@ -1,10 +1,6 @@
-import numpy
 import pandas
 import yfinance
-import tensorflow
-from sklearn.preprocessing import MinMaxScaler
 from training import train
-from graphing import graphChange
 from testing import test
 
 timesteps = 40 # 40 works well
@@ -32,29 +28,4 @@ print("Data length: " + str(len(data)))
 model = train(data[:int(len(data) * trainingRatio)], timesteps)
 
 # Test model
-print("Preparing to test model...")
-testData = data[int(len(data) * trainingRatio):]
-realPrice = data.iloc[:, 1:2].values
-datasetTotal = data["Close"]
-inputs = datasetTotal.values
-
-inputs = inputs.reshape(-1, 1) # param1 is number of rows, param2 is size of each row
-scaler = MinMaxScaler(feature_range=(0, 1))
-inputs = scaler.fit_transform(inputs)
-
-xTest = [[0] * timesteps] * timesteps
-for i in range(timesteps, len(inputs)):
-    xTest.append(inputs[i - timesteps:i, 0])
-
-xTest = numpy.array(xTest)
-xTest = numpy.reshape(xTest, (xTest.shape[0], xTest.shape[1], 1))
-
-# xTest is a 3D array
-
-# Predict
-print("Predicting...")  
-predictedPrice = model.predict(xTest)
-predictedPrice = scaler.inverse_transform(predictedPrice)
-
-# graphChange(predictedPrice, realPrice)
-test(predictedPrice, realPrice, timesteps)
+test(model, data[:int(len(data) * trainingRatio)], timesteps)
