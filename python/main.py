@@ -7,7 +7,7 @@ timesteps = 40 # 40 works well
 days = 365 * 10 # 10 years works well
 trainingRatio = 0.8 # What % of data to use for training, 0.8 is standard
 offsetDays = 0
-symbol = "WFC" # Symbols with 20% - 30% returns over 5Y seem to work best, such as KO, CVX, PM, BAC (v. well!), INTC, WFC (v. well!)
+symbol = "BAC" # Symbols with 20% - 30% returns over 5Y seem to work best, such as KO, CVX, PM, BAC (v. well!), INTC, WFC (v. well!)
 
 # Get historical data
 today = pandas.Timestamp.today()
@@ -25,7 +25,8 @@ print("Data length: " + str(len(data)))
 # print("CPUs:", tensorflow.config.list_physical_devices('CPU'))
 # print("GPUs:", tensorflow.config.list_physical_devices('GPU'))
 
+# Be really careful with : placement here!
 model = train(data[:int(len(data) * trainingRatio)], timesteps)
 
 # Test model
-test(model, data[:int(len(data) * trainingRatio)], timesteps)
+test(model, data[int(len(data) * trainingRatio):], timesteps)

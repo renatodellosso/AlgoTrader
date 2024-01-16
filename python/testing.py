@@ -6,7 +6,6 @@ from graphing import graphTest
 
 def test(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> None:
     print("Preparing to test model...")
-    print(type(data))
     realPrice = data.iloc[:, 1:2].values
     datasetTotal = data["Close"]
     inputs = datasetTotal.values
@@ -76,6 +75,8 @@ def algoTrade(predictedPrices: numpy.ndarray, realPrices: numpy.ndarray, timeste
     years = days / 365
     annualizedReturn = (1 + profit) ** (1 / years) - 1
 
+    print("Days Elapsed: ", days)
+    print("Years Elapsed: ", years)
     print("Shares: ", shares)
     print("Money: ", money)
     print("Final Share Price: ", realPrices[-1])
