@@ -1,2 +1,4 @@
 __pycache__
 .env
+sheetscreds.json
+token.json
