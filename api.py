@@ -5,6 +5,7 @@ from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 import yfinance
 from env import alpacaId, alpacaSecret
+from sheets import log
 
 # Init client
 print("Initializing Alpaca client...")
@@ -24,7 +25,7 @@ def getSecurity(symbol: str) -> Asset | RawData:
     return tradingClient.get_asset(symbol)
 
 def placeBuyOrder(symbol: str, shares: float) -> bool:
-    print("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
+    log("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
 
     # Check if shares is valid
     if(shares <= 0):
@@ -34,24 +35,24 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     # Check if we can trade this security
     security = getSecurity(symbol)
     if(not security.tradable):
-        print("Security " + symbol + " is not tradable!")
+        log("Security " + symbol + " is not tradable!")
         return False
     
     # Fetch the price from yfinance
     price = float(yfinance.Ticker(symbol).info['ask'])
 
     orderCost = price * shares
-    print("Order cost: $" + str(round(orderCost, 2)) + " ($" + str(round(price, 2)) + " * " + str(shares) + ")")
+    log("Order cost: $" + str(round(orderCost, 2)) + " ($" + str(round(price, 2)) + " * " + str(shares) + ")")
 
     # Check if we have enough money
     balance = getBalance()
-    print("Balance: $" + str(balance))
+    log("Balance: $" + str(balance))
     if(balance < orderCost):
-        print("Insufficient funds!")
+        log("Insufficient funds!")
         return False
     
     # Place order
-    print("Placing order for " + str(shares) + " shares of " + symbol + " for a total cost of $" + str(orderCost) + "...")
+    log("Placing order for " + str(shares) + " shares of " + symbol + " for a total cost of $" + str(orderCost) + "...")
     
     # Generate order data
     # GTC is Good Til Cancelled
@@ -61,33 +62,33 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     # Submit order
     tradingClient.submit_order(orderData)
     
-    print("Order placed!")
+    log("Order placed!")
     return True
 
 def placeSellOrder(symbol: str, shares: float) -> bool:
-    print("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
+    log("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
 
     if(shares <= 0):
-        print("Invalid number of shares!")
+        log("Invalid number of shares!")
         return False
 
     security = getSecurity(symbol)
     if(not security.tradable):
-        print("Security " + symbol + " is not tradable!")
+        log("Security " + symbol + " is not tradable!")
         return False
     
     # Check if we have enough shares
     position = getPosition(symbol)
-    print("Position: " + str(position))
+    log("Position: " + str(position))
     if(position < shares):
-        print("Insufficient shares!")
+        log("Insufficient shares!")
         return False
     
     # Fetch price
     price = int(yfinance.Ticker(symbol).info['bid'])
     
     # Place order
-    print("Placing order for " + str(shares) + " shares of " + symbol + " for a total value of $" + str(round(price * shares, 2)) + "...")
+    log("Placing order for " + str(shares) + " shares of " + symbol + " for a total value of $" + str(round(price * shares, 2)) + "...")
 
     # Generate order data
     # GTC is Good Til Cancelled
@@ -97,5 +98,5 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
     # Submit order
     tradingClient.submit_order(orderData)
 
-    print("Order placed!")
+    log("Order placed!")
     return True

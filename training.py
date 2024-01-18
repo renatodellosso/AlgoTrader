@@ -5,6 +5,8 @@ from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout
 
+from sheets import log
+
 def train(symbol: str, days: int, interval: str = "1d", timesteps: int = 60) -> Sequential:
     # Get historical data
     today = pandas.Timestamp.today()
@@ -16,45 +18,57 @@ def train(symbol: str, days: int, interval: str = "1d", timesteps: int = 60) -> 
 
     return train(data, timesteps)
 
-def train(data: pandas.DataFrame, timesteps: int = 40) -> Sequential:
-    trainingRatio = 0.8 # What % of data to use for training
+def train(data: pandas.DataFrame, timesteps: int = 40) -> Sequential | None:
+    try:
+        # Configure model
+        log("Configuring model...")
 
-    trainData = data[:int(len(data) * trainingRatio)]
+        trainingRatio = 0.8 # What % of data to use for training
 
-    # Scale data
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(trainData)
+        trainData = data[:int(len(data) * trainingRatio)]
 
-    # Add timesteps
-    xTrain = []
-    yTrain = []
-    for i in range(timesteps, len(scaled_data)):
-        xTrain.append(scaled_data[i - timesteps:i, 0])
-        yTrain.append(scaled_data[i, 0])
-    xTrain, yTrain = numpy.array(xTrain), numpy.array(yTrain)
-    xTrain = numpy.reshape(xTrain, (xTrain.shape[0], xTrain.shape[1], 1))
+        # Scale data
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        scaled_data = scaler.fit_transform(trainData)
 
-    # Configure model
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=(xTrain.shape[1], 1)))
-    model.add(Dropout(0.2))
-    model.add(LSTM(units=50, return_sequences=True))
-    model.add(Dropout(0.2))
-    model.add(LSTM(units=50))
-    model.add(Dropout(0.2))
-    model.add(Dense(units=1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
+        # Add timesteps
+        log("Adding timesteps...")
+        xTrain = []
+        yTrain = []
+        for i in range(timesteps, len(scaled_data)):
+            xTrain.append(scaled_data[i - timesteps:i, 0])
+            yTrain.append(scaled_data[i, 0])
+        xTrain, yTrain = numpy.array(xTrain), numpy.array(yTrain)
+        xTrain = numpy.reshape(xTrain, (xTrain.shape[0], xTrain.shape[1], 1))
 
-    # Record starting time
-    startTime = pandas.Timestamp.today()
+        # Configure layers
+        log("Configuring layers...")
+        model = Sequential()
+        model.add(LSTM(units=50, return_sequences=True, input_shape=(xTrain.shape[1], 1)))
+        model.add(Dropout(0.2))
+        model.add(LSTM(units=50, return_sequences=True))
+        model.add(Dropout(0.2))
+        model.add(LSTM(units=50))
+        model.add(Dropout(0.2))
+        model.add(Dense(units=1))
 
-    # Train model
-    print("Training model...")
-    model.fit(xTrain, yTrain, epochs=100, batch_size=64)
-    print("Done!")
+        # Compile model
+        log("Compiling model...")
+        model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # Log training time
-    endTime = pandas.Timestamp.today()
-    print("Training time: " + str(endTime - startTime))
+        # Record starting time
+        startTime = pandas.Timestamp.today()
 
-    return model
+        # Train model
+        log("Training model...")
+        model.fit(xTrain, yTrain, epochs=100, batch_size=64)
+
+        # Log training time
+        endTime = pandas.Timestamp.today()
+        timeTaken = endTime - startTime
+        log("Done! Training time: " +  str(timeTaken))
+
+        return model
+    except Exception as e:
+        log("Error Training Model: " + str(e))
+        return None
