@@ -1,9 +1,12 @@
 import pandas
 import yfinance
 from api import getBalance, getSecurity, placeBuyOrder
+from sheets import log
 from training import train
 from testing import test, predictTomorrow
 from trading import startLoop
+
+log("Starting process...")
 
 startLoop()
 

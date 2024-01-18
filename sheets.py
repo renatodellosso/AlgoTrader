@@ -1,15 +1,17 @@
+from datetime import datetime
 import os.path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+import psutil
+import platform
 
 from env import sheetsId
 
 # If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
 creds = None
 # The file token.json stores the user's access and refresh tokens, and is
@@ -33,4 +35,34 @@ service = build('sheets', 'v4', credentials=creds)
 def log(msg: str) -> None:
     print("[LS]:", msg)
 
-    service.spreadsheets().batchUpdate(
+    # Insert a row at the top
+    requestBody = {
+        "requests": [
+            {
+                "insertDimension": {
+                    "range": {
+                        "sheetId": 0,
+                        "dimension": "ROWS",
+                        "startIndex": 1,
+                        "endIndex": 2
+                    },
+                    "inheritFromBefore": False
+                }
+            }
+        ]
+    }
+
+    request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
+    request.execute()
+
+    # Write the message to the top row
+    requestBody = {
+        "range": "A2:E2",
+        "majorDimension": "ROWS",
+        "values": [
+            [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, psutil.virtual_memory().percent/100]
+        ]
+    }
+
+    request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
+    request.execute()
