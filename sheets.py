@@ -56,12 +56,14 @@ def log(msg: str) -> None:
     request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
     request.execute()
 
+    ramUsage = psutil.virtual_memory().percent
+
     # Write the message to the top row
     requestBody = {
         "range": "A2:E2",
         "majorDimension": "ROWS",
         "values": [
-            [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, psutil.virtual_memory().percent/100]
+            [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, ramUsage/100]
         ]
     }
 
@@ -69,6 +71,7 @@ def log(msg: str) -> None:
     request.execute()
 
     # If RAM usage is over 90%, wait for it to go down
-    while(psutil.virtual_memory().percent > 0.9):
-        print("RAM usage is over 90%! Waiting for it to go down...")
+    while(ramUsage > 0.9):
+        print("RAM usage is over 90%! Waiting for it to go down... Current RAM Usage: " + round(ramUsage, 1) + "%")
         time.sleep(60)
+        ramUsage = psutil.virtual_memory().percent
