@@ -71,7 +71,7 @@ def log(msg: str) -> None:
     request.execute()
 
     # If RAM usage is over 90%, wait for it to go down
-    while(ramUsage > 0.9):
+    while(ramUsage > 90):
         print("RAM usage is over 90%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
         time.sleep(60)
         ramUsage = psutil.virtual_memory().percent
