@@ -61,7 +61,7 @@ def train(data: pandas.DataFrame, timesteps: int = 40) -> Sequential | None:
 
         # Train model
         log("Training model...")
-        model.fit(xTrain, yTrain, epochs=100, batch_size=64)
+        model.fit(xTrain, yTrain, epochs=100, batch_size=32)
 
         # Log training time
         endTime = pandas.Timestamp.today()

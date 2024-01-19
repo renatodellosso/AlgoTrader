@@ -21,7 +21,9 @@ def startLoop() ->  None:
             # Check if time is between 9:30AM and 4PM
             now = datetime.datetime.now()
 
-            if(now.hour >= 9 and now.hour < 16) or platform.system() == "Windows":
+            hasRanLoop = False
+            if(now.hour >= 9 and now.hour < 16) or platform.system() == "Windows" or not hasRanLoop:
+                
                 # Run trading loop
                 log("Running trading loop...")
                 try:
@@ -29,6 +31,8 @@ def startLoop() ->  None:
                 except Exception as e:
                     log("Error in Daily Trade Loop:", e)
                 log("Done!")
+
+                hasRanLoop = True
 
                 # Sleep until after 4 PM
                 log("Sleeping until after 4 PM...")
@@ -42,11 +46,11 @@ def startLoop() ->  None:
             time.sleep(3600)
     except Exception as e:
         log("Error:" + str(e))
-    # finally:
-    #     log("Trading loop stopped!")
-    #     exit()
+    finally:
+        log("Trading loop stopped!")
+        # exit()
 
-def getData(symbol: str) -> DataFrame:    
+def getData(symbol: str) -> DataFrame:
     # Get historical data
     today = pandas.Timestamp.today()
     start_date = today - pandas.Timedelta(days=days)
@@ -60,12 +64,18 @@ def getData(symbol: str) -> DataFrame:
 def dailyTrade() -> None:
     expectedChanges = {}
 
+    # Get expected changes for each symbol
+    startTime = datetime.datetime.now()
     for symbol in symbols:
         try:
             expectedChanges[symbol] = getExpectedChange(symbol)
         except Exception as e:
             log("Error Predicting Symbol (" + symbol + "):", e)
             expectedChanges[symbol] = 0
+    endTime = datetime.datetime.now()
+
+    timeTaken = endTime - startTime
+    log("Finished predicting symbols! Time taken: " + str(timeTaken))
 
     log("Expected changes:" + str(expectedChanges))
 
@@ -110,6 +120,8 @@ def dailyTrade() -> None:
             placeBuyOrder(symbol, shares)
 
 def getExpectedChange(symbol: str) -> float:
+    log("Getting expected change for " + symbol + "...")
+
     # Get data
     data = getData(symbol)
 

@@ -25,7 +25,7 @@ def getSecurity(symbol: str) -> Asset | RawData:
     return tradingClient.get_asset(symbol)
 
 def placeBuyOrder(symbol: str, shares: float) -> bool:
-    log("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
+    log("Attempting to place buy order for " + str(shares) + " shares of " + symbol + "...")
 
     # Check if shares is valid
     if(shares <= 0):
@@ -66,7 +66,7 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     return True
 
 def placeSellOrder(symbol: str, shares: float) -> bool:
-    log("Attempting to place order for " + str(shares) + " shares of " + symbol + "...")
+    log("Attempting to place sell order for " + str(shares) + " shares of " + symbol + "...")
 
     if(shares <= 0):
         log("Invalid number of shares!")
