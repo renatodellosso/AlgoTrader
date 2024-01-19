@@ -1,5 +1,6 @@
 from datetime import datetime
 import os.path
+import time
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -66,3 +67,7 @@ def log(msg: str) -> None:
 
     request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
     request.execute()
+
+    # If RAM usage is over 90%, wait for it to go down
+    while(psutil.virtual_memory().percent > 0.9):
+        time.sleep(60)
