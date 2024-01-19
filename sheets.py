@@ -1,4 +1,5 @@
 from datetime import datetime
+import gc
 import os.path
 import time
 
@@ -70,8 +71,9 @@ def log(msg: str) -> None:
     request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
     request.execute()
 
-    # If RAM usage is over 90%, wait for it to go down
+    # If RAM usage is over 90%, wait for it to go down. Ram usage is 2-digits, not just a decimal
     while(ramUsage > 90):
         print("RAM usage is over 90%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
         time.sleep(60)
+        gc.collect()
         ramUsage = psutil.virtual_memory().percent

@@ -1,4 +1,5 @@
 import datetime
+import gc
 import platform
 import time
 
@@ -136,6 +137,7 @@ def getExpectedChange(symbol: str) -> float:
         log("Model is None!")
         del data
         del model
+        gc.collect()
         return 0
 
     log("Done!")
@@ -147,6 +149,7 @@ def getExpectedChange(symbol: str) -> float:
     # Delete unneeded variables to free up ram
     del model
     del data
+    gc.collect()
 
     log("Today's price: " + str(todayPrice))
     del todayPrice
