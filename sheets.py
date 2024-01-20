@@ -35,45 +35,48 @@ if not creds or not creds.valid:
 service = build('sheets', 'v4', credentials=creds)
 
 def log(msg: str, waitForRam: bool = True) -> None:
-    print("[LS]:", msg)
+    try:
+        print("[LS]:", msg)
 
-    # Insert a row at the top
-    requestBody = {
-        "requests": [
-            {
-                "insertDimension": {
-                    "range": {
-                        "sheetId": 0,
-                        "dimension": "ROWS",
-                        "startIndex": 1,
-                        "endIndex": 2
-                    },
-                    "inheritFromBefore": False
+        # Insert a row at the top
+        requestBody = {
+            "requests": [
+                {
+                    "insertDimension": {
+                        "range": {
+                            "sheetId": 0,
+                            "dimension": "ROWS",
+                            "startIndex": 1,
+                            "endIndex": 2
+                        },
+                        "inheritFromBefore": False
+                    }
                 }
-            }
-        ]
-    }
+            ]
+        }
 
-    request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
-    request.execute()
+        request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
+        request.execute()
 
-    ramUsage = psutil.virtual_memory().percent
-
-    # Write the message to the top row
-    requestBody = {
-        "range": "A2:E2",
-        "majorDimension": "ROWS",
-        "values": [
-            [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, ramUsage/100]
-        ]
-    }
-
-    request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
-    request.execute()
-
-    # If RAM usage is over 98%, wait for it to go down. Ram usage is 2-digits, not just a decimal
-    while(waitForRam and  ramUsage > 98):
-        print("RAM usage is over 98%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
-        time.sleep(60)
-        gc.collect()
         ramUsage = psutil.virtual_memory().percent
+
+        # Write the message to the top row
+        requestBody = {
+            "range": "A2:E2",
+            "majorDimension": "ROWS",
+            "values": [
+                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, ramUsage/100]
+            ]
+        }
+
+        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
+        request.execute()
+
+        # If RAM usage is over 98%, wait for it to go down. Ram usage is 2-digits, not just a decimal
+        while(waitForRam and  ramUsage > 98):
+            print("RAM usage is over 98%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
+            time.sleep(60)
+            gc.collect()
+            ramUsage = psutil.virtual_memory().percent
+    except Exception as e:
+        print("Error logging to sheets: " + str(e))
