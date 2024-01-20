@@ -71,9 +71,9 @@ def log(msg: str, waitForRam: bool = True) -> None:
     request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
     request.execute()
 
-    # If RAM usage is over 90%, wait for it to go down. Ram usage is 2-digits, not just a decimal
-    while(waitForRam and  ramUsage > 90):
-        print("RAM usage is over 90%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
+    # If RAM usage is over 95%, wait for it to go down. Ram usage is 2-digits, not just a decimal
+    while(waitForRam and  ramUsage > 95):
+        print("RAM usage is over 95%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
         time.sleep(60)
         gc.collect()
         ramUsage = psutil.virtual_memory().percent
