@@ -166,10 +166,11 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         # Get data, repeat until data is defined
         while not 'data' in locals():
+            log("Downloading data for " + symbol + "...")
             try:
                 data = getData(symbol)
             except Exception as e:
-                log("Error getting data for " + symbol + ":" + str(e))
+                log("Error downloading data for " + symbol + ": " + str(e))
                 time.sleep(60)
 
         # Train model
@@ -199,5 +200,5 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         return (todayPrice, predictedPriceToday, predictedPriceTmr)
     except Exception as e:
-        log("Error getting predicted prices for " + symbol + ":" + str(e))
+        log("Error getting predicted prices for " + symbol + ": " + str(e))
         return None
