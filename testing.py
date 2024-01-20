@@ -2,7 +2,9 @@ import numpy
 import pandas
 from keras import Sequential
 from sklearn.preprocessing import MinMaxScaler
+import yfinance
 from graphing import graphTest
+from training import train
 
 def predictToday(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> float:
     realPrice = data.iloc[:, 1:2].values
@@ -135,3 +137,28 @@ def algoTrade(predictedPrices: numpy.ndarray, realPrices: numpy.ndarray, timeste
     # realPrices = realPrices[timesteps:]
 
     # # graphTest(predictedPrices, realPrices, netWorth)
+
+def testSingleStock(symbol: str, timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0) -> None:
+    # Get historical data
+    today = pandas.Timestamp.today()
+    today = today - pandas.Timedelta(days=offsetDays)
+    start_date = today - pandas.Timedelta(days=days)
+
+    print("Downloading data from " + start_date.strftime("%Y-%m-%d") + " to " + today.strftime("%Y-%m-%d") + "...")
+    data = pandas.DataFrame(yfinance.download(symbol, start=start_date, end=today))
+    print("Done!")
+
+    print("Data length: " + str(len(data)))
+
+    # Check TensorFlow configuration
+    # print("TensorFlow configuration:")
+    # print("CPUs:", tensorflow.config.list_physical_devices('CPU'))
+    # print("GPUs:", tensorflow.config.list_physical_devices('GPU'))
+
+    # Be really careful with : placement here!
+    model = train(data[:int(len(data) * trainingRatio)], timesteps)
+
+    # Test model
+    test(model, data[int(len(data) * trainingRatio):], timesteps)
+
+    # print("Predicted Tmr:", predictTomorrow(model, data, timesteps))
