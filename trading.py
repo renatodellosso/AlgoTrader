@@ -2,14 +2,14 @@ import datetime
 import gc
 import platform
 import time
-
 from pandas import DataFrame
 import pandas
 import yfinance
+import concurrent.futures
+
 from api import getBalance, getPosition, placeBuyOrder, placeSellOrder
 from sheets import log
 from testing import predictToday, predictTomorrow
-
 from training import train
 
 symbols = ["KO", "CVX", "PM", "INTC", "WFC", "BAC"]
@@ -122,37 +122,29 @@ def dailyTrade() -> None:
 
 def getExpectedChange(symbol: str) -> float:
     log("Getting expected change for " + symbol + "...")
+    
+    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+        log("Starting getPredictedPrices function on other process...")
+        process = executor.submit(getPredictedPrices, symbol)
+        log("Waiting for getPredictedPrices function to finish...")
 
-    # Get data
-    data = getData(symbol)
+        exception = process.exception()
+        if exception != None:
+            raise exception
+        predictions = process.result()
 
-    # Get actual price for today
-    todayPrice = data.iloc[-1]['Close']
-
-    # Train model
-    log("Training model for " + symbol + "...")
-    model = train(data, 40)
-
-    if(model == None):
-        log("Model is None!")
-        del data
-        del model
-        gc.collect()
+    if predictions == None:
+        log("Predictions is None!")
         return 0
 
-    log("Done!")
+    # Get today's price
+    todayPrice = predictions[0]
 
     # Get predicted prices
-    predictedPriceToday = predictToday(model, data, 40)
-    predictedPriceTmr = predictTomorrow(model, data, 40)
-
-    # Delete unneeded variables to free up ram
-    del model
-    del data
-    gc.collect()
+    predictedPriceToday = predictions[1]
+    predictedPriceTmr = predictions[2]
 
     log("Today's price: " + str(todayPrice))
-    del todayPrice
     log("Predicted price for today: " + str(predictedPriceToday))
     log("Predicted price for tomorrow: " + str(predictedPriceTmr))
 
@@ -161,3 +153,43 @@ def getExpectedChange(symbol: str) -> float:
     log("Difference: " + str(difference))
 
     return difference / predictedPriceToday
+
+def getPredictedPrices(*args: any) -> tuple | None:
+    print("getPredictedPrices function running on other process...")
+    try:
+        symbol = args[0]
+
+        log("Getting predicted prices for " + symbol + "...")
+
+        # Get data
+        data = getData(symbol)
+
+        # Train model
+        log("Training model for " + symbol + "...")
+        model = train(data, 40)
+
+        if(model == None):
+            log("Model is None!")
+            del data
+            del model
+            gc.collect()
+            return 0
+
+        log("Done!")
+
+        # Get today's price
+        todayPrice = data.iloc[-1]['Close']
+
+        # Get predicted prices
+        predictedPriceToday = predictToday(model, data, 40)
+        predictedPriceTmr = predictTomorrow(model, data, 40)
+
+        # Delete unneeded variables to free up ram
+        del model
+        del data
+        gc.collect()
+
+        return (todayPrice, predictedPriceToday, predictedPriceTmr)
+    except Exception as e:
+        log("Error getting predicted prices for " + symbol + ":", e)
+        return None

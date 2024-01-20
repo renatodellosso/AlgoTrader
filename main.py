@@ -1,14 +1,10 @@
-import pandas
-import yfinance
-from api import getBalance, getSecurity, placeBuyOrder
 from sheets import log
-from training import train
-from testing import test, predictTomorrow
 from trading import startLoop
 
-log("Starting process...")
-
-startLoop()
+# Only run if this is the main process
+if(__name__ == "__main__"):
+    log("Starting main process...")
+    startLoop()
 
 # timesteps = 40 # 40 works well
 # days = 365 * 10 # 10 years works well

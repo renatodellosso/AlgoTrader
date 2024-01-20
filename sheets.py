@@ -34,7 +34,7 @@ if not creds or not creds.valid:
 
 service = build('sheets', 'v4', credentials=creds)
 
-def log(msg: str) -> None:
+def log(msg: str, waitForRam: bool = True) -> None:
     print("[LS]:", msg)
 
     # Insert a row at the top
@@ -72,7 +72,7 @@ def log(msg: str) -> None:
     request.execute()
 
     # If RAM usage is over 90%, wait for it to go down. Ram usage is 2-digits, not just a decimal
-    while(ramUsage > 90):
+    while(waitForRam and  ramUsage > 90):
         print("RAM usage is over 90%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
         time.sleep(60)
         gc.collect()
