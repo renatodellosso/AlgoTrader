@@ -30,7 +30,7 @@ def startLoop() ->  None:
                 try:
                     dailyTrade()
                 except Exception as e:
-                    log("Error in Daily Trade Loop:", e)
+                    log("Error in Daily Trade Loop:" + str(e))
                 log("Done!")
 
                 hasRanLoop = True
@@ -106,7 +106,7 @@ def dailyTrade() -> None:
     log("Expected changes (% of total): " + str(expectedChanges))
 
     # Wait for a few minutes to allow sell orders to complete
-    log("Waiting for a few minutes...")
+    log("Waiting for a few minutes to allow sell orders to be processed...")
     time.sleep(60 * 10)
 
     # Buy symbols where expected change is > 0
