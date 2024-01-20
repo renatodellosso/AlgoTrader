@@ -2,10 +2,16 @@ import numpy
 import pandas
 import yfinance
 from sklearn.preprocessing import MinMaxScaler
+import keras
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout
 
 from sheets import log
+
+class ModelCallback(keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        if(epoch % 10 == 0):
+            log("Epoch " + str(epoch) + " done!")
 
 def train(symbol: str, days: int, interval: str = "1d", timesteps: int = 60) -> Sequential:
     # Get historical data
@@ -61,7 +67,7 @@ def train(data: pandas.DataFrame, timesteps: int = 40) -> Sequential | None:
 
         # Train model
         log("Training model...")
-        model.fit(xTrain, yTrain, epochs=100, batch_size=16)
+        model.fit(xTrain, yTrain, epochs=100, batch_size=16, callbacks=[ModelCallback()])
 
         # Log training time
         endTime = pandas.Timestamp.today()

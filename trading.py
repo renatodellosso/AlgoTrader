@@ -7,7 +7,7 @@ import pandas
 import yfinance
 import concurrent.futures
 
-from api import getBalance, getPosition, placeBuyOrder, placeSellOrder
+from api import getBuyingPower, getPosition, placeBuyOrder, placeSellOrder
 from sheets import log
 from testing import predictToday, predictTomorrow
 from training import train
@@ -113,12 +113,12 @@ def dailyTrade() -> None:
     time.sleep(60 * 10)
 
     # Buy symbols where expected change is > 0
-    balance = getBalance()
-    log("Balance:" + str(balance))
+    buyingPower = getBuyingPower()
+    log("Buying Power:" + str(buyingPower))
     for symbol in expectedChanges:
         # Buy
-        if balance > 0:
-            shares = balance * expectedChanges[symbol] / yfinance.Ticker(symbol).info['regularMarketOpen']
+        if buyingPower > 0:
+            shares = buyingPower * expectedChanges[symbol] / yfinance.Ticker(symbol).info['regularMarketOpen']
             shares = shares[0] # Not sure how it's ending up as an array
             log("Buying " + str(shares) + " shares of " + symbol + "...")
             placeBuyOrder(symbol, shares)

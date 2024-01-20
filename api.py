@@ -11,8 +11,8 @@ from sheets import log
 print("Initializing Alpaca client...")
 tradingClient = TradingClient(alpacaId, alpacaSecret, paper=True)
 
-def getBalance() -> float:
-    return float(tradingClient.get_account().cash)
+def getBuyingPower() -> float:
+    return float(tradingClient.get_account().buying_power)
 
 def getPosition(symbol: str) -> float:
     allPositions = tradingClient.get_all_positions()
@@ -45,7 +45,7 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     log("Order cost: $" + str(round(orderCost, 2)) + " ($" + str(round(price, 2)) + " * " + str(shares) + ")")
 
     # Check if we have enough money
-    balance = getBalance()
+    balance = getBuyingPower()
     log("Balance: $" + str(balance))
     if(balance < orderCost):
         log("Insufficient funds!")

@@ -62,14 +62,15 @@ def log(msg: str, waitForRam: bool = True) -> None:
 
         # Write the message to the top row
         requestBody = {
-            "range": "A2:E2",
+            "range": "A2:F2",
             "majorDimension": "ROWS",
             "values": [
-                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, ramUsage/100]
+                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, \
+                    ramUsage/100, round(psutil.Process().memory_info().rss/ 1024 ** 2)]
             ]
         }
 
-        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
+        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:F2", valueInputOption="USER_ENTERED", body=requestBody)
         request.execute()
 
         # If RAM usage is over 98%, wait for it to go down. Ram usage is 2-digits, not just a decimal
