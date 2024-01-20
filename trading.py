@@ -136,6 +136,9 @@ def getExpectedChange(symbol: str) -> float:
             raise exception
         predictions = process.result()
 
+        del process
+        gc.collect()
+
     if predictions == None:
         log("Predictions is None!")
         return 0

@@ -73,10 +73,10 @@ def log(msg: str, waitForRam: bool = True) -> None:
         request.execute()
 
         # If RAM usage is over 98%, wait for it to go down. Ram usage is 2-digits, not just a decimal
-        while(waitForRam and  ramUsage > 98):
-            print("RAM usage is over 98%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
-            time.sleep(60)
-            gc.collect()
-            ramUsage = psutil.virtual_memory().percent
+        # while(waitForRam and  ramUsage > 98):
+        #     print("RAM usage is over 98%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
+        #     time.sleep(60)
+        #     gc.collect()
+        #     ramUsage = psutil.virtual_memory().percent
     except Exception as e:
         print("Error logging to sheets: " + str(e))
