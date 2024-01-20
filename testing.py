@@ -51,7 +51,7 @@ def predictTomorrow(model: Sequential, data: pandas.DataFrame, timesteps: int = 
     return predictedPrice[-1]
 
 def test(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> None:
-    print("Preparing to test model...")
+    print("Preparing to test model... Data Length: " + str(len(data)))
     realPrice = data.iloc[:, 1:2].values
     datasetTotal = data["Close"]
     inputs = datasetTotal.values
