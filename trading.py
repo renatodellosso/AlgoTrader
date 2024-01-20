@@ -45,6 +45,8 @@ def startLoop() ->  None:
             # Sleep for 1 hour
             log("Sleeping for 1 hour...")
             time.sleep(3600)
+    except KeyboardInterrupt:
+        log("Keyboard Interrupt!")
     except Exception as e:
         log("Error:" + str(e))
     finally:
