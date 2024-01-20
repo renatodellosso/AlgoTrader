@@ -119,7 +119,7 @@ def dailyTrade() -> None:
         if balance > 0:
             shares = balance * expectedChanges[symbol] / yfinance.Ticker(symbol).info['regularMarketOpen']
             shares = shares[0] # Not sure how it's ending up as an array
-            log("Buying " + str(shares) + " shares of " + (symbol) + "...")
+            log("Buying " + str(shares) + " shares of " + symbol + "...")
             placeBuyOrder(symbol, shares)
 
 def getExpectedChange(symbol: str) -> float:
@@ -193,5 +193,5 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         return (todayPrice, predictedPriceToday, predictedPriceTmr)
     except Exception as e:
-        log("Error getting predicted prices for " + symbol + ":", e)
+        log("Error getting predicted prices for " + symbol + ":" + str(e))
         return None
