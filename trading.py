@@ -47,6 +47,7 @@ def startLoop() ->  None:
             time.sleep(3600)
     except KeyboardInterrupt:
         log("Keyboard Interrupt!")
+        exit()
     except Exception as e:
         log("Error:" + str(e))
     finally:
@@ -73,7 +74,7 @@ def dailyTrade() -> None:
         try:
             expectedChanges[symbol] = getExpectedChange(symbol)
         except Exception as e:
-            log("Error Predicting Symbol (" + symbol + "):", e)
+            log("Error Predicting Symbol (" + symbol + "):" + str(e))
             expectedChanges[symbol] = 0
     endTime = datetime.datetime.now()
 
@@ -88,7 +89,7 @@ def dailyTrade() -> None:
             # Sell
             shares = getPosition(symbol)
             if shares > 0:
-                print("Selling" + str(shares) + "shares of" + symbol + "...")
+                log("Selling" + str(shares) + "shares of" + symbol + "...")
                 placeSellOrder(symbol, shares)
 
     # Remove symbols where expected change is < 0 from expectedChanges
@@ -113,7 +114,7 @@ def dailyTrade() -> None:
 
     # Buy symbols where expected change is > 0
     balance = getBalance()
-    log("Balance:", balance)
+    log("Balance:" + str(balance))
     for symbol in expectedChanges:
         # Buy
         if balance > 0:
