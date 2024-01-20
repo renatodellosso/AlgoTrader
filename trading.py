@@ -164,8 +164,8 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         log("Getting predicted prices for " + symbol + "...")
 
-        # Get data
-        while data == None:
+        # Get data, repeat until data is defined
+        while not 'data' in locals():
             try:
                 data = getData(symbol)
             except Exception as e:
