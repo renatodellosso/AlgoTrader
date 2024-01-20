@@ -165,7 +165,12 @@ def getPredictedPrices(*args: any) -> tuple | None:
         log("Getting predicted prices for " + symbol + "...")
 
         # Get data
-        data = getData(symbol)
+        while data == None:
+            try:
+                data = getData(symbol)
+            except Exception as e:
+                log("Error getting data for " + symbol + ":" + str(e))
+                time.sleep(60)
 
         # Train model
         log("Training model for " + symbol + "...")
