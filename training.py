@@ -11,7 +11,9 @@ from sheets import log
 
 class ModelCallback(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
-        print("\nEpoch " + str(epoch) + " done! RAM Usage: " + str(round(psutil.Process().memory_info().rss/ 1024 ** 2)) + " mb")
+        print("\nEpoch " + str(epoch) + " done! RAM Usage: " + \
+            str(round(psutil.Process().memory_info().rss/ 1024 ** 2)) + " mb (total: " + \
+            str(round(psutil.virtual_memory().percent, 1)) + "%)")
         if(epoch % 10 == 0):
             log("Epoch " + str(epoch) + " done!")
 
