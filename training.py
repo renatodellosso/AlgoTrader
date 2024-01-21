@@ -1,5 +1,6 @@
 import numpy
 import pandas
+import psutil
 import yfinance
 from sklearn.preprocessing import MinMaxScaler
 import keras
@@ -10,6 +11,7 @@ from sheets import log
 
 class ModelCallback(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
+        print("\nEpoch " + str(epoch) + " done! RAM Usage: " + str(round(psutil.Process().memory_info().rss/ 1024 ** 2)) + " mb")
         if(epoch % 10 == 0):
             log("Epoch " + str(epoch) + " done!")
 
