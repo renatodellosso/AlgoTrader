@@ -63,8 +63,8 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.BUY, time_in_force=TimeInForce.DAY)
 
     # Submit order
-    tradingClient.submit_order(orderData)
-    logTransaction(symbol, OrderSide.BUY, shares, price)
+    order = tradingClient.submit_order(orderData)
+    logTransaction(symbol, order.id, OrderSide.BUY, shares, price)
     
     log("Order placed!")
     return True
@@ -100,8 +100,8 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
     orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.SELL, time_in_force=TimeInForce.DAY)
 
     # Submit order
-    tradingClient.submit_order(orderData)
-    logTransaction(symbol, OrderSide.SELL, shares, price)
+    order = tradingClient.submit_order(orderData)
+    logTransaction(symbol, order.id, OrderSide.SELL, shares, price)
 
     log("Order placed!")
     return True
