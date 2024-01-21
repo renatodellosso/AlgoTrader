@@ -7,6 +7,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from alpaca.trading.enums import OrderSide
 import psutil
 import platform
 
@@ -72,12 +73,50 @@ def log(msg: str, waitForRam: bool = True) -> None:
 
         request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:F2", valueInputOption="USER_ENTERED", body=requestBody)
         request.execute()
+    except Exception as e:
+        print("Error logging to sheets: " + str(e))
 
-        # If RAM usage is over 98%, wait for it to go down. Ram usage is 2-digits, not just a decimal
-        # while(waitForRam and  ramUsage > 98):
-        #     print("RAM usage is over 98%! Waiting for it to go down... Current RAM Usage: " + str(round(ramUsage, 1)) + "%")
-        #     time.sleep(60)
-        #     gc.collect()
-        #     ramUsage = psutil.virtual_memory().percent
+def logTransaction(symbol: str, side: OrderSide, shares: float, price: float) -> None:
+    try:
+        totalPrice = shares * price
+        print("[LST]:", symbol, side, "Shares:", round(shares, 2), "Price:", round(price, 2), "Total Price:", round(totalPrice, 2))
+
+        # Get Sheet ID
+        sheetIdRes = service.spreadsheets().get(spreadsheetId=sheetsId, ranges=["Transactions!A1:2"]).execute()
+
+        # Insert a row at the top
+        requestBody = {
+            "requests": [
+                {
+                    "insertDimension": {
+                        "range": {
+                            "sheetId": sheetIdRes["sheets"][0]["properties"]["sheetId"],
+                            "dimension": "ROWS",
+                            "startIndex": 1,
+                            "endIndex": 2
+                        },
+                        "inheritFromBefore": False
+                    }
+                }
+            ]
+        }
+
+        request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
+        request.execute()
+
+        ramUsage = psutil.virtual_memory().percent
+
+        # Write the message to the top row
+        requestBody = {
+            "range": "Transactions!A2:E2",
+            "majorDimension": "ROWS",
+            "values": [
+                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), symbol, side, round(shares, 2), \
+                    round(price, 2), round(totalPrice, 2)]
+            ]
+        }
+
+        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:E2", valueInputOption="USER_ENTERED", body=requestBody)
+        request.execute()
     except Exception as e:
         print("Error logging to sheets: " + str(e))

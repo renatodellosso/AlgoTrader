@@ -5,7 +5,7 @@ from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 import yfinance
 from env import alpacaId, alpacaSecret
-from sheets import log
+from sheets import log, logTransaction
 
 # Init client
 print("Initializing Alpaca client...")
@@ -61,6 +61,7 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
 
     # Submit order
     tradingClient.submit_order(orderData)
+    logTransaction(symbol, OrderSide.BUY, shares, price)
     
     log("Order placed!")
     return True
@@ -97,6 +98,7 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
 
     # Submit order
     tradingClient.submit_order(orderData)
+    logTransaction(symbol, OrderSide.SELL, shares, price)
 
     log("Order placed!")
     return True

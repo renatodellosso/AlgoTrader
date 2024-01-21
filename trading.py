@@ -118,8 +118,14 @@ def dailyTrade() -> None:
     for symbol in expectedChanges:
         # Buy
         if buyingPower > 0:
-            shares = buyingPower * expectedChanges[symbol] / yfinance.Ticker(symbol).info['regularMarketOpen']
+            openPrice = yfinance.Ticker(symbol).info['regularMarketOpen']
+            shares = buyingPower * expectedChanges[symbol] / openPrice
             shares = shares[0] # Not sure how it's ending up as an array
+            
+            if(shares * openPrice < 1):
+                log("Attempting to buy less than $1 of " + symbol + "! Skipping buy order...")
+                continue
+
             log("Buying " + str(shares) + " shares of " + symbol + "...")
             placeBuyOrder(symbol, shares)
 
