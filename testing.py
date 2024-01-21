@@ -1,9 +1,10 @@
+import gc
 import numpy
 import pandas
 from keras import Sequential
 from sklearn.preprocessing import MinMaxScaler
 import yfinance
-from graphing import graphTest
+from graphing import graphMultiStockTest, graphTest
 from training import train
 
 def predictToday(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> float:
@@ -183,4 +184,87 @@ def testSingleStock(symbol: str, timesteps: int = 40, days: int = 365 * 10, trai
     # Test model
     test(model, data[int(len(data) * trainingRatio):], timesteps)
 
-    # print("Predicted Tmr:", predictTomorrow(model, data, timesteps))
+def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0) -> None:
+    today = pandas.Timestamp.today()
+    today = today - pandas.Timedelta(days=offsetDays)
+    start_date = today - pandas.Timedelta(days=days)
+
+    # Get predicted and real prices for each stock
+    predictedPrices = {}
+    realPrices = {}
+    for symbol in symbols:
+        print("Downloading data from " + start_date.strftime("%Y-%m-%d") + " to " + today.strftime("%Y-%m-%d") + "...")
+        data = pandas.DataFrame(yfinance.download(symbol, start=start_date, end=today))
+        print("Done!")
+
+        # Be really careful with : placement here!
+        model = train(data[:int(len(data) * trainingRatio)], timesteps, symbol)
+
+        # Get predictions from model
+        predictedPrices[symbol] = predictPrices(model, data[int(len(data) * trainingRatio):], timesteps)
+
+        realPrices[symbol] = data["Close"].values
+
+        del data, model
+        gc.collect()
+
+    # Initialize variables for testing
+    print("Preparing variables for testing...")
+    money = 100.0
+    shares = {}
+
+    for symbol in symbols:
+        shares[symbol] = 0
+
+    netWorth = [money]
+
+    # Test model
+    print("Testing model...")
+    for i in range(len(predictedPrices[symbols[0]]) - 1):
+        buyList = {}
+        for symbol in symbols:
+            diff = predictedPrices[symbol][i + 1] - predictedPrices[symbol][i]
+            if diff > 0:
+                # Add to list to buy
+                buyList[symbol] = diff
+            else:
+                # Sell shares
+                money += shares[symbol] * realPrices[symbol][i]
+                shares[symbol] = 0
+
+        # Convert buy list into % of total
+        total = 0
+        for symbol in buyList:
+            total += buyList[symbol]
+
+        for symbol in buyList:
+            buyList[symbol] /= total
+
+        # Buy shares
+        buyingPower = money
+        for symbol in buyList:
+            shares[symbol] += buyList[symbol] * buyingPower / realPrices[symbol][i]
+            money -= buyList[symbol] * buyingPower
+
+        # Calculate net worth
+        netWorthToday = money
+        for symbol in symbols:
+            netWorthToday += shares[symbol] * realPrices[symbol][i]
+        
+        netWorth.append(netWorthToday)
+
+    # Calculate % profit and annualized return
+    profit = (money - 100) / 100
+
+    days = len(predictedPrices[symbols[0]])
+    years = days / 365
+    annualizedReturn = (1 + profit) ** (1 / years) - 1
+
+    print("Days Elapsed: ", days)
+    print("Years Elapsed: ", years)
+    print("Shares: ", shares)
+    print("Money: ", money)
+    print("Profit %:", round(profit * 100, 2))
+    print("Annualized Return %:", round(annualizedReturn * 100, 2))
+
+    graphMultiStockTest(netWorth)

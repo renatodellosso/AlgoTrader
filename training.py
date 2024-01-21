@@ -10,10 +10,13 @@ from keras.layers import Dense, LSTM, Dropout
 from sheets import log
 
 class ModelCallback(keras.callbacks.Callback):
+    def __init__(self, label):
+        self.label = label
+
     def on_epoch_end(self, epoch, logs=None):
-        print("\nEpoch " + str(epoch) + " done! \n\tRAM Usage: " + \
+        print("\nEpoch " + str(epoch) + " done!\n\tLabel: " + self.label + "\n\tRAM Usage: " + \
             str(round(psutil.Process().memory_info().rss/ 1024 ** 2)) + " mb \n\tTotal RAM Usage: " + \
-            str(round(psutil.virtual_memory().percent, 1)))
+            str(round(psutil.virtual_memory().percent, 1))) + "%"
         if(epoch % 10 == 0):
             log("Epoch " + str(epoch) + " done!")
 
@@ -28,7 +31,7 @@ def train(symbol: str, days: int, interval: str = "1d", timesteps: int = 60) -> 
 
     return train(data, timesteps)
 
-def train(data: pandas.DataFrame, timesteps: int = 40) -> Sequential | None:
+def train(data: pandas.DataFrame, timesteps: int = 40, label: str = "Unknown") -> Sequential | None:
     try:
         # Configure model
         log("Configuring model...")
@@ -74,7 +77,7 @@ def train(data: pandas.DataFrame, timesteps: int = 40) -> Sequential | None:
 
         # Train model
         log("Training model...")
-        model.fit(xTrain, yTrain, epochs=100, batch_size=32, callbacks=[ModelCallback()])
+        model.fit(xTrain, yTrain, epochs=100, batch_size=32, callbacks=[ModelCallback(label)])
 
         # Log training time
         endTime = pandas.Timestamp.today()

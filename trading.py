@@ -9,7 +9,7 @@ import concurrent.futures
 
 from api import getBuyingPower, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
 from sheets import log, logTransaction
-from testing import predictPrices, predictToday, predictTomorrow
+from testing import  predictToday, predictTomorrow
 from training import train
 
 symbols = ["KO", "CVX", "PM", "INTC", "WFC", "BAC"]
@@ -125,11 +125,11 @@ def dailyTrade() -> None:
     for symbol in expectedChanges:
         # Buy
         if buyingPower > 0:
-            openPrice = yfinance.Ticker(symbol).info['regularMarketOpen']
-            shares = buyingPower * expectedChanges[symbol] / openPrice
+            price = yfinance.Ticker(symbol).info['bid']
+            shares = buyingPower * expectedChanges[symbol] / price
             shares = shares[0] # Not sure how it's ending up as an array
             
-            if(shares * openPrice < 1):
+            if(shares * price < 1):
                 log("Attempting to buy less than $1 of " + symbol + "! Skipping buy order...")
                 continue
 
@@ -193,12 +193,11 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         # Train model
         log("Training model for " + symbol + "...")
-        model = train(data, 40)
+        model = train(data, 40, symbol)
 
         if(model == None):
             log("Model is None!")
-            del data
-            del model
+            del data, model
             gc.collect()
             return 0
 
@@ -215,8 +214,7 @@ def getPredictedPrices(*args: any) -> tuple | None:
         predictedPriceTmr = predictTomorrow(model, data, 40)
 
         # Delete unneeded variables to free up ram
-        del model
-        del data
+        del model, data
         gc.collect()
 
         return (todayPrice, predictedPriceToday, predictedPriceTmr)

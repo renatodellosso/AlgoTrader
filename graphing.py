@@ -53,3 +53,13 @@ def graphTest(predictedPrice: numpy.ndarray, realPrice: numpy.ndarray, netWorth:
     plt.ylabel('Stock Price')
     plt.legend()
     plt.show()
+
+def graphMultiStockTest(networth: list) -> None:
+    # Plot results
+    print("Plotting results...")
+    plt.plot(networth, color='blue', label='Net Worth')
+    plt.title('Algo Trade Test Results')
+    plt.xlabel('Time')
+    plt.ylabel('Net Worth')
+    plt.legend()
+    plt.show()
