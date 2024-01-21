@@ -87,7 +87,7 @@ def dailyTrade() -> None:
     log("Cancelling all open orders...")
     openOrders = getOpenOrders()
     for order in openOrders:
-        tradingClient.cancel_order(order.id)
+        tradingClient.cancel_order_by_id(order.id)
         logTransaction(order.symbol, "CANCEL-" + order.side, order.qty, order.filled_avg_price)
 
     # Sell symbols where expected change is < 0
@@ -208,9 +208,11 @@ def getPredictedPrices(*args: any) -> tuple | None:
         todayPrice = data.iloc[-1]['Close']
 
         # Get predicted prices
-        predictedPrices = predictPrices(model, data[int(len(data)*0.8):], 40)
-        predictedPriceToday = predictedPrices[-2] # It's possible this is actually yesterday's price
-        predictedPriceTmr = predictedPrices[-1] # Might be today's price
+        # predictedPrices = predictPrices(model, data[int(len(data)*0.8):], 40)
+        # predictedPriceToday = predictedPrices[-2] # It's possible this is actually yesterday's price
+        # predictedPriceTmr = predictedPrices[-1] # Might be today's price
+        predictedPriceToday = predictToday(model, data, 40)
+        predictedPriceTmr = predictTomorrow(model, data, 40)
 
         # Delete unneeded variables to free up ram
         del model
