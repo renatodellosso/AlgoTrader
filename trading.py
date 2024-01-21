@@ -171,6 +171,9 @@ def getPredictedPrices(*args: any) -> tuple | None:
         while not 'data' in locals():
             try:
                 data = getData(symbol)
+            except KeyboardInterrupt:
+                log("Keyboard Interrupt!")
+                exit()
             except Exception as e:
                 log("Error downloading data for " + symbol + ": " + str(e))
                 time.sleep(60)
@@ -201,6 +204,9 @@ def getPredictedPrices(*args: any) -> tuple | None:
         gc.collect()
 
         return (todayPrice, predictedPriceToday, predictedPriceTmr)
+    except KeyboardInterrupt:
+        log("Keyboard Interrupt!")
+        exit()
     except Exception as e:
         log("Error getting predicted prices for " + symbol + ": " + str(e))
         return None
