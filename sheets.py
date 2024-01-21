@@ -79,7 +79,7 @@ def log(msg: str, waitForRam: bool = True) -> None:
 def logTransaction(symbol: str, id: str, side: str, shares: float, price: float) -> None:
     try:
         totalPrice = shares * price
-        print("[LST]:", symbol, side, "Shares:", round(shares, 2), "Price:", round(price, 2), "Total Price:", round(totalPrice, 2))
+        print("[LST]:", symbol, "ID:", id, side, "Shares:", round(shares, 2), "Price:", round(price, 2), "Total Price:", round(totalPrice, 2))
 
         # Get Sheet ID
         sheetIdRes = service.spreadsheets().get(spreadsheetId=sheetsId, ranges=["Transactions!A1:2"]).execute()
@@ -90,7 +90,7 @@ def logTransaction(symbol: str, id: str, side: str, shares: float, price: float)
                 {
                     "insertDimension": {
                         "range": {
-                            "sheetId": sheetIdRes["sheets"][0]["properties"]["sheetId"],
+                            "sheetId": str(sheetIdRes["sheets"][0]["properties"]["sheetId"]),
                             "dimension": "ROWS",
                             "startIndex": 1,
                             "endIndex": 2
@@ -103,8 +103,6 @@ def logTransaction(symbol: str, id: str, side: str, shares: float, price: float)
 
         request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
         request.execute()
-
-        ramUsage = psutil.virtual_memory().percent
 
         # Write the message to the top row
         requestBody = {
