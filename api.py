@@ -1,6 +1,6 @@
 from alpaca.trading.client import TradingClient
 from alpaca.common import RawData
-from alpaca.broker.client import Asset
+from alpaca.broker.client import Asset, Order
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 import yfinance
@@ -23,6 +23,9 @@ def getPosition(symbol: str) -> float:
 
 def getSecurity(symbol: str) -> Asset | RawData:
     return tradingClient.get_asset(symbol)
+
+def getOpenOrders() -> list[Order] | RawData:
+    return tradingClient.get_orders(status="open")
 
 def placeBuyOrder(symbol: str, shares: float) -> bool:
     log("Attempting to place buy order for " + str(shares) + " shares of " + symbol + "...")

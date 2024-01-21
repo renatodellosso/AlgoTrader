@@ -7,8 +7,8 @@ import pandas
 import yfinance
 import concurrent.futures
 
-from api import getBuyingPower, getPosition, placeBuyOrder, placeSellOrder
-from sheets import log
+from api import getBuyingPower, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
+from sheets import log, logTransaction
 from testing import predictToday, predictTomorrow
 from training import train
 
@@ -82,6 +82,13 @@ def dailyTrade() -> None:
     log("Finished predicting symbols! Time taken: " + str(timeTaken))
 
     log("Expected changes:" + str(expectedChanges))
+
+    # Cancel all open orders
+    log("Cancelling all open orders...")
+    openOrders = getOpenOrders()
+    for order in openOrders:
+        tradingClient.cancel_order(order.id)
+        logTransaction(order.symbol, "CANCEL-" + order.side, order.qty, order.filled_avg_price)
 
     # Sell symbols where expected change is < 0
     for symbol in symbols:

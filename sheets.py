@@ -76,7 +76,7 @@ def log(msg: str, waitForRam: bool = True) -> None:
     except Exception as e:
         print("Error logging to sheets: " + str(e))
 
-def logTransaction(symbol: str, side: OrderSide, shares: float, price: float) -> None:
+def logTransaction(symbol: str, side: str, shares: float, price: float) -> None:
     try:
         totalPrice = shares * price
         print("[LST]:", symbol, side, "Shares:", round(shares, 2), "Price:", round(price, 2), "Total Price:", round(totalPrice, 2))
