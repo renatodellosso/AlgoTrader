@@ -52,6 +52,9 @@ def train(data: pandas.DataFrame, timesteps: int = 40) -> Sequential | None:
         xTrain, yTrain = numpy.array(xTrain), numpy.array(yTrain)
         xTrain = numpy.reshape(xTrain, (xTrain.shape[0], xTrain.shape[1], 1))
 
+        # Clear session to maintain performance
+        keras.backend.clear_session()
+
         # Configure layers
         log("Configuring layers...")
         model = Sequential()
