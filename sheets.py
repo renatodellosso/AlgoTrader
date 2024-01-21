@@ -2,6 +2,7 @@ from datetime import datetime
 import gc
 import os.path
 import time
+from uuid import UUID
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -76,7 +77,7 @@ def log(msg: str, waitForRam: bool = True) -> None:
     except Exception as e:
         print("Error logging to sheets: " + str(e))
 
-def logTransaction(symbol: str, id: str, side: str, shares: float, price: float) -> None:
+def logTransaction(symbol: str, id: UUID, side: str, shares: float, price: float) -> None:
     try:
         totalPrice = shares * price
         print("[LST]:", symbol, "ID:", id, side, "Shares:", round(shares, 2), "Price:", round(price, 2), "Total Price:", round(totalPrice, 2))
@@ -106,15 +107,16 @@ def logTransaction(symbol: str, id: str, side: str, shares: float, price: float)
 
         # Write the message to the top row
         requestBody = {
-            "range": "Transactions!A2:F2",
+            "range": "Transactions!A2:G2",
             "majorDimension": "ROWS",
             "values": [
-                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), id, symbol, side, round(shares, 2), \
+                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), str(id), symbol, side, round(shares, 2), \
                     round(price, 2), round(totalPrice, 2)]
             ]
         }
 
-        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:F2", valueInputOption="USER_ENTERED", body=requestBody)
+        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="Transactions!A2:G2", \
+            valueInputOption="USER_ENTERED", body=requestBody)
         request.execute()
     except Exception as e:
         print("Error logging to sheets: " + str(e))
