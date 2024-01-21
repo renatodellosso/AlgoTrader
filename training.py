@@ -10,13 +10,13 @@ from keras.layers import Dense, LSTM, Dropout
 from sheets import log
 
 class ModelCallback(keras.callbacks.Callback):
-    def __init__(self, label):
+    def __init__(self, label = "Unknown"):
         self.label = label
 
     def on_epoch_end(self, epoch, logs=None):
         print("\nEpoch " + str(epoch) + " done!\n\tLabel: " + self.label + "\n\tRAM Usage: " + \
             str(round(psutil.Process().memory_info().rss/ 1024 ** 2)) + " mb \n\tTotal RAM Usage: " + \
-            str(round(psutil.virtual_memory().percent, 1))) + "%"
+            str(round(psutil.virtual_memory().percent, 1)) + "%")
         if(epoch % 10 == 0):
             log("Epoch " + str(epoch) + " done!")
 

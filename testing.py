@@ -193,6 +193,8 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     predictedPrices = {}
     realPrices = {}
     for symbol in symbols:
+        print("Getting predicted prices for " + symbol + "...")
+
         print("Downloading data from " + start_date.strftime("%Y-%m-%d") + " to " + today.strftime("%Y-%m-%d") + "...")
         data = pandas.DataFrame(yfinance.download(symbol, start=start_date, end=today))
         print("Done!")
@@ -201,9 +203,10 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         model = train(data[:int(len(data) * trainingRatio)], timesteps, symbol)
 
         # Get predictions from model
-        predictedPrices[symbol] = predictPrices(model, data[int(len(data) * trainingRatio):], timesteps)
+        predictedPrices[symbol] = \
+            predictPrices(model, data[int(len(data) * trainingRatio) - timesteps:], timesteps)
 
-        realPrices[symbol] = data["Close"].values
+        realPrices[symbol] = data["Close"].values[int(len(data) * trainingRatio) - timesteps:]
 
         del data, model
         gc.collect()
@@ -220,10 +223,10 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
     # Test model
     print("Testing model...")
-    for i in range(len(predictedPrices[symbols[0]]) - 1):
+    for i in range(timesteps, len(predictedPrices[symbols[0]]) - 1):
         buyList = {}
         for symbol in symbols:
-            diff = predictedPrices[symbol][i + 1] - predictedPrices[symbol][i]
+            diff = predictedPrices[symbol][i + 1][0] - predictedPrices[symbol][i][0]
             if diff > 0:
                 # Add to list to buy
                 buyList[symbol] = diff
@@ -252,6 +255,17 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             netWorthToday += shares[symbol] * realPrices[symbol][i]
         
         netWorth.append(netWorthToday)
+
+        # Print progress
+        print("Day " + str(i) + ":", netWorthToday, "Money:", money)
+        for symbol in symbols:
+            print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][i] * shares[symbol], " USD")
+
+    # Sell all shares
+    for symbol in symbols:
+        print("Selling", shares[symbol], "shares of", symbol, "for", realPrices[symbol][-1] * shares[symbol], "USD")
+        money += shares[symbol] * realPrices[symbol][-1]
+        shares[symbol] = 0
 
     # Calculate % profit and annualized return
     profit = (money - 100) / 100
