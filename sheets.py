@@ -82,16 +82,13 @@ def logTransaction(symbol: str, id: UUID, side: str, shares: float, price: float
         totalPrice = shares * price
         print("[LST]:", symbol, "ID:", id, side, "Shares:", round(shares, 2), "Price:", round(price, 2), "Total Price:", round(totalPrice, 2))
 
-        # Get Sheet ID
-        sheetIdRes = service.spreadsheets().get(spreadsheetId=sheetsId, ranges=["Transactions!A1:2"]).execute()
-
         # Insert a row at the top
         requestBody = {
             "requests": [
                 {
                     "insertDimension": {
                         "range": {
-                            "sheetId": str(sheetIdRes["sheets"][0]["properties"]["sheetId"]),
+                            "sheetId": "328859340",
                             "dimension": "ROWS",
                             "startIndex": 1,
                             "endIndex": 2
