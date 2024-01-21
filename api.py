@@ -25,7 +25,7 @@ def getSecurity(symbol: str) -> Asset | RawData:
     return tradingClient.get_asset(symbol)
 
 def getOpenOrders() -> list[Order] | RawData:
-    return tradingClient.get_orders(status="open")
+    return tradingClient.get_orders()
 
 def placeBuyOrder(symbol: str, shares: float) -> bool:
     log("Attempting to place buy order for " + str(shares) + " shares of " + symbol + "...")
