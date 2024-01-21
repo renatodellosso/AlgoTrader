@@ -1,9 +1,9 @@
-import pandas
-import yfinance
 from sheets import log
-from testing import test, testSingleStock
 from trading import startLoop
-from training import train
+from testing import testSingleStock
+
+# testSingleStock("BAC")
+# exit()
 
 # Only run if this is the main process
 if(__name__ == "__main__"):
