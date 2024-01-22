@@ -121,7 +121,7 @@ def dailyTrade() -> None:
 
     # Buy symbols where expected change is > 0
     buyingPower = getBuyingPower()
-    log("Buying Power:" + str(buyingPower))
+    log("Buying Power: " + str(buyingPower))
     for symbol in expectedChanges:
         # Buy
         if buyingPower > 0:
