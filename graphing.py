@@ -58,6 +58,7 @@ def graphMultiStockTest(networth: list) -> None:
     # Plot results
     print("Plotting results...")
     plt.plot(networth, color='blue', label='Net Worth')
+    plt.plot([0] * len(networth), color='black', label='Zero')
     plt.title('Algo Trade Test Results')
     plt.xlabel('Time')
     plt.ylabel('Net Worth')

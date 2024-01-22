@@ -223,6 +223,8 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
     # Test model
     print("Testing model...")
+    buyPrices = {}
+    profitBySymbol = {}
     for i in range(timesteps, len(predictedPrices[symbols[0]]) - 1):
         buyList = {}
         for symbol in symbols:
@@ -230,8 +232,12 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             if diff > 0:
                 # Add to list to buy
                 buyList[symbol] = diff
-            else:
+            elif symbol in shares and shares[symbol] > 0:
                 # Sell shares
+                tradeProfit = shares[symbol] * (realPrices[symbol][-1] - buyPrices[symbol])
+                if symbol not in profitBySymbol:
+                    profitBySymbol[symbol] = 0
+                profitBySymbol[symbol] += tradeProfit
                 money += shares[symbol] * realPrices[symbol][i]
                 shares[symbol] = 0
 
@@ -246,6 +252,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         # Buy shares
         buyingPower = money
         for symbol in buyList:
+            buyPrices[symbol] = realPrices[symbol][i]
             shares[symbol] += buyList[symbol] * buyingPower / realPrices[symbol][i]
             money -= buyList[symbol] * buyingPower
 
@@ -263,22 +270,36 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
     # Sell all shares
     for symbol in symbols:
-        print("Selling", shares[symbol], "shares of", symbol, "for", realPrices[symbol][-1] * shares[symbol], "USD")
+        # Calculate profit from this trade
+        tradeProfit = shares[symbol] * (realPrices[symbol][-1] - buyPrices[symbol])
+        if symbol not in profitBySymbol:
+            profitBySymbol[symbol] = 0
+        profitBySymbol[symbol] += tradeProfit
+        print("Selling", shares[symbol], "shares of", symbol, "for", realPrices[symbol][-1] * shares[symbol], \
+            "USD - Profit:", tradeProfit, "USD")
         money += shares[symbol] * realPrices[symbol][-1]
         shares[symbol] = 0
 
     # Calculate % profit and annualized return
-    profit = (money - 100) / 100
+    profit = money - 100
+    profitPercent = profit / 100
 
     days = len(predictedPrices[symbols[0]])
     years = days / 365
-    annualizedReturn = (1 + profit) ** (1 / years) - 1
+    annualizedReturn = (1 + profitPercent) ** (1 / years) - 1
 
     print("Days Elapsed: ", days)
     print("Years Elapsed: ", years)
     print("Shares: ", shares)
     print("Money: ", money)
-    print("Profit %:", round(profit * 100, 2))
+    print("Profit:", round(profit, 2))
+    print("Profit %:", round(profitPercent * 100, 2))
     print("Annualized Return %:", round(annualizedReturn * 100, 2))
+
+    # Log profit by symbol
+    print("Profit by Symbol:")
+    for symbol in symbols:
+        print(symbol + " Profit:", profitBySymbol[symbol] if symbol in profitBySymbol else "0", \
+            "(% of total profit: " + str(round(profitBySymbol[symbol] / profit * 100, 2)) + "%)")
 
     graphMultiStockTest(netWorth)

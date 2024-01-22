@@ -160,6 +160,7 @@ def getExpectedChange(symbol: str) -> float:
     todayPrice = predictions[0]
 
     # Get predicted prices
+    # If actual performance is lower than in backtesting, try using the last 20% of data instead of the last 40 days
     predictedPriceToday = predictions[1]
     predictedPriceTmr = predictions[2]
 
