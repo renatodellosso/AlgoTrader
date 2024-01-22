@@ -107,8 +107,8 @@ def logTransaction(symbol: str, id: UUID, side: str, shares: float, price: float
             "range": "Transactions!A2:G2",
             "majorDimension": "ROWS",
             "values": [
-                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), str(id), symbol, side, round(shares, 2), \
-                    round(price, 2), round(totalPrice, 2)]
+                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), str(id), symbol, str(side), str(round(shares, 2)), \
+                    str(round(price, 2)), str(round(totalPrice, 2))]
             ]
         }
 
