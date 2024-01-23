@@ -1,4 +1,7 @@
+import multiprocessing
+from time import sleep
 from alpaca.trading.client import TradingClient
+from alpaca.trading.stream import TradingStream
 from alpaca.common import RawData
 from alpaca.broker.client import Asset, Order
 from alpaca.trading.requests import MarketOrderRequest
@@ -10,6 +13,44 @@ from sheets import log, logTransaction
 # Init client
 print("Initializing Alpaca client...")
 tradingClient = TradingClient(alpacaId, alpacaSecret, paper=True)
+
+# Set up stream
+async def updateHandler(data: RawData) -> None:
+    eventType = data.event
+    order: Order = data.order
+    id = order.id
+    symbol = order.symbol
+    side = order.side
+    shares = order.qty if order.filled_qty == 0 else order.filled_qty
+
+    logTransaction(symbol, id, str(eventType) + "-" + ("BUY" if side == OrderSide.BUY else "SELL"), \
+        float(shares) if shares is not None else "N/A", \
+        float(order.filled_avg_price) if order.filled_avg_price is not None else "N/A")
+
+def initStream() -> None:
+    print("Initializing Alpaca stream...")
+    tradingStream = TradingStream(alpacaId, alpacaSecret, paper=True)
+    tradingStream.subscribe_trade_updates(updateHandler)
+    tradingStream.run()
+    tradingStream.stop()
+
+def startStreamProcess() -> multiprocessing.Process:
+    process = multiprocessing.Process(target=initStream)
+    process.start()
+    print("Alpaca stream process started!")
+
+if __name__ == "__main__":
+    process = startStreamProcess()
+
+    while True:
+        try:
+            sleep(1)
+        except KeyboardInterrupt:
+            print("Exiting...")
+            process.terminate()
+            exit()
+        
+print("Alpaca client initialized!")
 
 def getBuyingPower() -> float:
     return float(tradingClient.get_account().buying_power)
@@ -51,8 +92,8 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     balance = getBuyingPower()
     log("Balance: $" + str(balance))
     if(balance < orderCost):
-        log("Insufficient funds!")
-        return False
+        shares = balance / price
+        log("Insufficient funds! Buying " + str(shares) + " shares instead...")
     
     # Place order
     log("Placing order for " + str(shares) + " shares of " + symbol + " for a total cost of $" + str(orderCost) + "...")
@@ -64,7 +105,6 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
 
     # Submit order
     order = tradingClient.submit_order(orderData)
-    logTransaction(symbol, order.id, OrderSide.BUY, shares, price)
     
     log("Order placed!")
     return True
@@ -101,7 +141,6 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
 
     # Submit order
     order = tradingClient.submit_order(orderData)
-    logTransaction(symbol, order.id, OrderSide.SELL, shares, price)
 
     log("Order placed!")
     return True

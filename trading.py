@@ -11,8 +11,9 @@ from api import getBuyingPower, getOpenOrders, getPosition, placeBuyOrder, place
 from sheets import log, logTransaction
 from testing import  predictToday, predictTomorrow
 from training import train
+from stocklist import stocklist
 
-symbols = ["KO", "CVX", "PM", "INTC", "WFC", "BAC"]
+symbols = stocklist
 days = 365 * 10 # 10 years works well
 
 def startLoop() ->  None:

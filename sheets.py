@@ -8,7 +8,6 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from alpaca.trading.enums import OrderSide
 import psutil
 import platform
 
@@ -77,10 +76,13 @@ def log(msg: str, waitForRam: bool = True) -> None:
     except Exception as e:
         print("Error logging to sheets: " + str(e))
 
-def logTransaction(symbol: str, id: UUID, side: str, shares: float, price: float) -> None:
+def logTransaction(symbol: str, id: UUID, event: str, shares: float | str, price: float | str) -> None:
     try:
-        totalPrice = shares * price
-        print("[LST]:", symbol, "ID:", id, side, "Shares:", round(shares, 2), "Price:", round(price, 2), "Total Price:", round(totalPrice, 2))
+        if shares is float and price is float:
+            totalPrice = round(shares * price, 2)
+        else: totalPrice = "N/A"
+        print("[LST]:", symbol, "ID:", id, event, "Shares:", round(shares, 2) if shares is float else shares, \
+              "Price:", round(price, 2) if price is float else price, "Total Price:", totalPrice)
 
         # Insert a row at the top
         requestBody = {
@@ -107,8 +109,9 @@ def logTransaction(symbol: str, id: UUID, side: str, shares: float, price: float
             "range": "Transactions!A2:G2",
             "majorDimension": "ROWS",
             "values": [
-                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), str(id), symbol, str(side), str(round(shares, 2)), \
-                    str(round(price, 2)), str(round(totalPrice, 2))]
+                [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), str(id), symbol, str(event), \
+                    str(round(shares, 2)) if shares is float else shares, \
+                    str(round(price, 2)) if price is float else price, totalPrice]
             ]
         }
 

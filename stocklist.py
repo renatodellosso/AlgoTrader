@@ -1,0 +1,1 @@
+stocklist = ["KO", "CVX", "PM", "INTC", "WFC", "BAC"]

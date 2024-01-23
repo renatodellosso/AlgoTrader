@@ -228,6 +228,9 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     for i in range(timesteps, len(predictedPrices[symbols[0]]) - 1):
         buyList = {}
         for symbol in symbols:
+            if len(predictedPrices[symbol]) <= i + 1:
+                continue
+
             diff = predictedPrices[symbol][i + 1][0] - predictedPrices[symbol][i][0]
             if diff > 0:
                 # Add to list to buy
