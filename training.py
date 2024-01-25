@@ -60,13 +60,13 @@ def train(data: pandas.DataFrame, timesteps: int = 40, label: str = "Unknown") -
         # Configure layers
         log("Configuring layers...")
         model = Sequential()
-        model.add(LSTM(units=50, return_sequences=True, input_shape=(xTrain.shape[1], 1)))
-        model.add(Dropout(0.2))
+        model.add(LSTM(units=50, return_sequences=True, input_shape=(xTrain.shape[1], 1))) # Expand data into 50 neurons
+        model.add(Dropout(0.2)) # Randomly turn off 20% of neurons to prevent overfitting
         model.add(LSTM(units=50, return_sequences=True))
         model.add(Dropout(0.2))
         model.add(LSTM(units=50))
         model.add(Dropout(0.2))
-        model.add(Dense(units=1))
+        model.add(Dense(units=1)) # Condense data back into 1 piece of data
 
         # Compile model
         log("Compiling model...")
