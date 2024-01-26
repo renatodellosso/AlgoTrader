@@ -240,7 +240,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
                 buyList[symbol] = diff
             elif symbol in shares and shares[symbol] > 0:
                 # Sell shares
-                tradeProfit = shares[symbol] * (realPrices[symbol][-1] - buyPrices[symbol])
+                tradeProfit = shares[symbol] * (realPrices[symbol][i] - buyPrices[symbol])
                 if symbol not in profitBySymbol:
                     profitBySymbol[symbol] = 0
                 profitBySymbol[symbol] += tradeProfit
@@ -265,13 +265,18 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         # Calculate net worth
         netWorthToday = money
         for symbol in symbols:
-            netWorthToday += shares[symbol] * realPrices[symbol][i]
+            if len(realPrices[symbol]) <= i:
+                netWorthToday += shares[symbol] * realPrices[symbol][-1]
+            else:
+                netWorthToday += shares[symbol] * realPrices[symbol][i]
         
         netWorth.append(netWorthToday)
 
         # Print progress
         print("Day " + str(i) + ":", netWorthToday, "Money:", money)
         for symbol in symbols:
+            if len(realPrices[symbol]) <= i:
+                print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][-1] * shares[symbol], " USD")
             print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][i] * shares[symbol], " USD")
 
     # Sell all shares
