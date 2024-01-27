@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 import yfinance
 from graphing import graphMultiStockTest, graphTest
 from training import train
+from stocklist import stocklist
 
 def predictToday(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> float:
     datasetTotal = data["Close"]
@@ -208,6 +209,9 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
         realPrices[symbol] = data["Close"].values[int(len(data) * trainingRatio) - timesteps:]
 
+        print("Real prices: ", len(realPrices[symbol]))
+        print("First Date:", data.index[0])
+
         del data, model
         gc.collect()
 
@@ -314,3 +318,6 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             "(% of total profit: " + str(round(profitBySymbol[symbol] / profit * 100, 2)) + "%)")
 
     graphMultiStockTest(netWorth)
+
+if __name__ == "__main__":
+    testMultiStock(stocklist, days=365*20, trainingRatio=0.4)
