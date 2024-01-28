@@ -200,12 +200,20 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         data = pandas.DataFrame(yfinance.download(symbol, start=start_date, end=today))
         print("Done!")
 
+        trainingData = data[:int(len(data) * trainingRatio)]
+        testingData = data[int(len(data) * trainingRatio) - timesteps:]
+
         # Be really careful with : placement here!
-        model = train(data[:int(len(data) * trainingRatio)], timesteps, symbol)
+        model = train(trainingData, timesteps, symbol)
 
         # Get predictions from model
+        predictedPrices[symbol] = []
+
+        # for i in range(timesteps+1, len(testingData)):
+        #     predictedPrices[symbol].append(predictToday(model, testingData[:i], timesteps))
+
         predictedPrices[symbol] = \
-            predictPrices(model, data[int(len(data) * trainingRatio) - timesteps:], timesteps)
+            predictPrices(model, testingData, timesteps)
 
         realPrices[symbol] = data["Close"].values[int(len(data) * trainingRatio) - timesteps:]
 
@@ -242,13 +250,32 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             if diff > 0:
                 # Add to list to buy
                 buyList[symbol] = diff
-            elif symbol in shares and shares[symbol] > 0:
+            elif symbol in shares and shares[symbol] > 0 and diff < 0:
                 # Sell shares
-                tradeProfit = shares[symbol] * (realPrices[symbol][i] - buyPrices[symbol])
+                priceDiff = realPrices[symbol][i] - buyPrices[symbol]
+                tradeProfit = shares[symbol] * priceDiff
+                tradeValue = shares[symbol] * realPrices[symbol][i]
+
+                # Log details
+                print("Selling", symbol, "Profit:", tradeProfit, "USD")
+                # print("\tShares:", shares[symbol])
+                # print("\tCurrent Price:", realPrices[symbol][i])
+                # print("\tBuy Price:", buyPrices[symbol])
+                # print("\tPrice Diff:", priceDiff)
+                # print("\tTotal Value:", tradeValue)
+                # print("\tTrade Profit:", tradeProfit)
+
+                # Update profit by symbol
                 if symbol not in profitBySymbol:
                     profitBySymbol[symbol] = 0
+                # print("\tPrev Profit for Symbol:", profitBySymbol[symbol])
                 profitBySymbol[symbol] += tradeProfit
-                money += shares[symbol] * realPrices[symbol][i]
+                # print("\tNew Profit for Symbol:", profitBySymbol[symbol])
+
+                # Update money and shares
+                # print("\tPrev Money:", money)
+                money += tradeValue
+                # print("\tNew Money:", money)
                 shares[symbol] = 0
 
         # Convert buy list into % of total
@@ -262,7 +289,17 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         # Buy shares
         buyingPower = money
         for symbol in buyList:
-            buyPrices[symbol] = realPrices[symbol][i]
+            shareCount = buyList[symbol] * buyingPower / realPrices[symbol][i]
+
+            # Generate buy price by weighted average
+            if symbol not in buyPrices or shares[symbol] == 0:
+                buyPrices[symbol] = realPrices[symbol][i]
+            else:
+                buyPrices[symbol] = (realPrices[symbol][i] * shareCount + buyPrices[symbol] * shares[symbol]) / (shareCount + shares[symbol])
+
+            if symbol not in shares:
+                shares[symbol] = 0
+
             shares[symbol] += buyList[symbol] * buyingPower / realPrices[symbol][i]
             money -= buyList[symbol] * buyingPower
 
@@ -277,19 +314,20 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         netWorth.append(netWorthToday)
 
         # Print progress
-        print("Day " + str(i) + ":", netWorthToday, "Money:", money)
-        for symbol in symbols:
-            if len(realPrices[symbol]) <= i:
-                print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][-1] * shares[symbol], " USD")
-            print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][i] * shares[symbol], " USD")
+        # print("Day " + str(i) + ":", netWorthToday, "Money:", money)
+        # for symbol in symbols:
+        #     if len(realPrices[symbol]) <= i:
+        #         print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][-1] * shares[symbol], " USD")
+        #     print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][i] * shares[symbol], " USD")
 
     # Sell all shares
     for symbol in symbols:
-        # Calculate profit from this trade
-        tradeProfit = shares[symbol] * (realPrices[symbol][-1] - buyPrices[symbol])
-        if symbol not in profitBySymbol:
-            profitBySymbol[symbol] = 0
-        profitBySymbol[symbol] += tradeProfit
+        if symbol in buyPrices:
+            # Calculate profit from this trade
+            tradeProfit = shares[symbol] * (realPrices[symbol][-1] - buyPrices[symbol])
+            if symbol not in profitBySymbol:
+                profitBySymbol[symbol] = 0
+            profitBySymbol[symbol] += tradeProfit
         print("Selling", shares[symbol], "shares of", symbol, "for", realPrices[symbol][-1] * shares[symbol], \
             "USD - Profit:", tradeProfit, "USD")
         money += shares[symbol] * realPrices[symbol][-1]

@@ -9,7 +9,7 @@ import concurrent.futures
 
 from api import getBuyingPower, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
 from sheets import log, logTransaction
-from testing import  predictToday, predictTomorrow
+from testing import  predictPrices, predictToday, predictTomorrow
 from training import train
 from stocklist import stocklist
 
@@ -209,11 +209,11 @@ def getPredictedPrices(*args: any) -> tuple | None:
         todayPrice = data.iloc[-1]['Close']
 
         # Get predicted prices
-        # predictedPrices = predictPrices(model, data[int(len(data)*0.8):], 40)
-        # predictedPriceToday = predictedPrices[-2] # It's possible this is actually yesterday's price
-        # predictedPriceTmr = predictedPrices[-1] # Might be today's price
-        predictedPriceToday = predictToday(model, data, 40)
-        predictedPriceTmr = predictTomorrow(model, data, 40)
+        predictedPrices = predictPrices(model, data[int(len(data)*0.8):], 40)
+        predictedPriceToday = predictedPrices[-2] # It's possible this is actually yesterday's price
+        predictedPriceTmr = predictedPrices[-1] # Might be today's price
+        # predictedPriceToday = predictToday(model, data, 40)
+        # predictedPriceTmr = predictTomorrow(model, data, 40)
 
         # Delete unneeded variables to free up ram
         del model, data
