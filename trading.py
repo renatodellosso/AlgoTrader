@@ -9,7 +9,7 @@ import concurrent.futures
 
 from api import getBuyingPower, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
 from sheets import log, logTransaction
-from testing import  predictPrices, predictToday, predictTomorrow
+from predicting import predictPrices
 from training import train
 from stocklist import stocklist
 
