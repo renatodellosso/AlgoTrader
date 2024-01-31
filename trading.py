@@ -88,8 +88,10 @@ def dailyTrade() -> None:
     log("Cancelling all open orders...")
     openOrders = getOpenOrders()
     for order in openOrders:
-        tradingClient.cancel_order_by_id(order.id)
-        logTransaction(order.symbol, order.id, "CANCEL-" + order.side, order.qty, order.filled_avg_price)
+        # Only cancel orders for symbols we are tracking
+        if order.symbol in symbols:
+            tradingClient.cancel_order_by_id(order.id)
+            logTransaction(order.symbol, order.id, "CANCEL-" + order.side, order.qty, order.filled_avg_price)
 
     # Sell symbols where expected change is < 0
     for symbol in symbols:
