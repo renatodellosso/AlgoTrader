@@ -4,7 +4,7 @@ from alpaca.trading.client import TradingClient
 from alpaca.trading.stream import TradingStream
 from alpaca.common import RawData
 from alpaca.broker.client import Asset, Order
-from alpaca.trading.requests import LimitOrderRequest
+from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 import yfinance
 from env import alpacaId, alpacaSecret
@@ -101,8 +101,7 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     # Generate order data
     # GTC is Good Til Cancelled
     # We use DAY so we can have fractional orders
-    orderData = LimitOrderRequest(symbol=symbol, qty=shares, side=OrderSide.BUY, time_in_force=TimeInForce.DAY, \
-        limit_price=round(price * 1.01, 2), extended_hours=True)
+    orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.BUY, time_in_force=TimeInForce.DAY)
 
     # Submit order
     order = tradingClient.submit_order(orderData)
@@ -138,8 +137,7 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
     # Generate order data
     # GTC is Good Til Cancelled
     # We use DAY so we can have fractional orders
-    orderData = LimitOrderRequest(symbol=symbol, qty=shares, side=OrderSide.SELL, time_in_force=TimeInForce.DAY, \
-        limit_price=round(price * 0.99, 2), extended_hours=True)
+    orderData = MarketOrderRequest(symbol=symbol, qty=shares, side=OrderSide.SELL, time_in_force=TimeInForce.DAY)
 
     # Submit order
     order = tradingClient.submit_order(orderData)

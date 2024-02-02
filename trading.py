@@ -16,12 +16,14 @@ from stocklist import stocklist
 symbols = stocklist
 days = 365 * 10 # 10 years works well
 
+est = datetime.timezone(datetime.timedelta(hours=-5))
+
 def startLoop() ->  None:
     log("Starting trading loop...")
     try:
         while True:
             # Check if time is between 9:30AM and 4PM
-            now = datetime.datetime.now()
+            now = datetime.datetime.now(est)
 
             hasRanLoop = False
             if(now.hour >= 9 and now.hour < 16) or platform.system() == "Windows" or not hasRanLoop:
@@ -38,10 +40,10 @@ def startLoop() ->  None:
 
                 # Sleep until after 4 PM
                 log("Sleeping until after 4 PM...")
-                now = datetime.datetime.now()
+                now = datetime.datetime.now(est)
                 while(now.hour < 16):
                     time.sleep(3600)
-                    now = datetime.datetime.now()
+                    now = datetime.datetime.now(est)
             
             # Sleep for 1 hour
             log("Sleeping for 1 hour...")
@@ -120,7 +122,7 @@ def dailyTrade() -> None:
 
     # Wait for a few minutes to allow sell orders to complete
     log("Waiting for 10 minutes to allow sell orders to be processed...")
-    # time.sleep(60 * 10)
+    time.sleep(60 * 10)
 
     # Buy symbols where expected change is > 0
     buyingPower = getBuyingPower()
