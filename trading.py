@@ -119,8 +119,8 @@ def dailyTrade() -> None:
     log("Expected changes (% of total): " + str(expectedChanges))
 
     # Wait for a few minutes to allow sell orders to complete
-    log("Waiting for a few minutes to allow sell orders to be processed...")
-    time.sleep(60 * 10)
+    log("Waiting for 10 minutes to allow sell orders to be processed...")
+    # time.sleep(60 * 10)
 
     # Buy symbols where expected change is > 0
     buyingPower = getBuyingPower()
