@@ -18,7 +18,7 @@ class ModelCallback(keras.callbacks.Callback):
             str(round(psutil.Process().memory_info().rss/ 1024 ** 2)) + " mb \n\tTotal RAM Usage: " + \
             str(round(psutil.virtual_memory().percent, 1)) + "%")
         if(epoch % 10 == 0):
-            log("Epoch " + str(epoch) + " done!")
+            print("Epoch " + str(epoch) + " done!")
 
 def train(symbol: str, days: int, interval: str = "1d", timesteps: int = 60) -> Sequential:
     # Get historical data
@@ -45,7 +45,7 @@ def train(data: pandas.DataFrame, timesteps: int = 40, label: str = "Unknown") -
         scaled_data = scaler.fit_transform(trainData)
 
         # Add timesteps
-        log("Adding timesteps...")
+        print("Adding timesteps...")
         xTrain = []
         yTrain = []
         for i in range(timesteps, len(scaled_data)):
@@ -58,7 +58,7 @@ def train(data: pandas.DataFrame, timesteps: int = 40, label: str = "Unknown") -
         keras.backend.clear_session()
 
         # Configure layers
-        log("Configuring layers...")
+        print("Configuring layers...")
         model = Sequential()
         model.add(LSTM(units=50, return_sequences=True, input_shape=(xTrain.shape[1], 1))) # Expand data into 50 neurons
         model.add(Dropout(0.2)) # Randomly turn off 20% of neurons to prevent overfitting
@@ -69,7 +69,7 @@ def train(data: pandas.DataFrame, timesteps: int = 40, label: str = "Unknown") -
         model.add(Dense(units=1)) # Condense data back into 1 piece of data
 
         # Compile model
-        log("Compiling model...")
+        print("Compiling model...")
         model.compile(optimizer='adam', loss='mean_squared_error')
 
         # Record starting time

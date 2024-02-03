@@ -145,9 +145,9 @@ def getExpectedChange(symbol: str) -> float:
     log("Getting expected change for " + symbol + "...")
     
     with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
-        log("Starting getPredictedPrices function on other process...")
+        print("Starting getPredictedPrices function on other process...")
         process = executor.submit(getPredictedPrices, symbol)
-        log("Waiting for getPredictedPrices function to finish...")
+        print("Waiting for getPredictedPrices function to finish...")
 
         exception = process.exception()
         if exception != None:
