@@ -44,42 +44,55 @@ def log(msg: str, waitForRam: bool = True) -> None:
     try:
         print("[LS]:", msg)
 
-        # Insert a row at the top
-        requestBody = {
-            "requests": [
-                {
-                    "insertDimension": {
-                        "range": {
-                            "sheetId": 0,
-                            "dimension": "ROWS",
-                            "startIndex": 1,
-                            "endIndex": 2
-                        },
-                        "inheritFromBefore": False
-                    }
-                }
-            ]
-        }
-
-        request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
-        request.execute()
+        insertRowAtTop("0")
 
         ramUsage = psutil.virtual_memory().percent
 
         # Write the message to the top row
-        requestBody = {
-            "range": "A2:F2",
-            "majorDimension": "ROWS",
-            "values": [
+        values = [
                 [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), msg, platform.node(), psutil.cpu_percent()/100, \
                     ramUsage/100, round(psutil.Process().memory_info().rss/ 1024 ** 2)]
             ]
-        }
+        
+        write("A2:F2", values)
 
-        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="A2:F2", valueInputOption="USER_ENTERED", body=requestBody)
-        request.execute()
     except Exception as e:
         print("Error logging to sheets: " + str(e))
+
+def insertRowAtTop(sheetId: str) -> None:
+    requestBody = {
+        "requests": [
+            {
+                "insertDimension": {
+                    "range": {
+                        "sheetId": sheetId,
+                        "dimension": "ROWS",
+                        "startIndex": 1,
+                        "endIndex": 2
+                    },
+                    "inheritFromBefore": False
+                }
+            }
+        ]
+    }
+
+    request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
+    request.execute()
+
+def write(range: str, values: list[list[str]]) -> None:
+    requestBody = {
+        "range": range,
+        "majorDimension": "ROWS",
+        "values": values
+    }
+
+    request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range=range, \
+        valueInputOption="USER_ENTERED", body=requestBody)
+    request.execute()
+
+def read(range: str) -> list[list[str]]:
+    res = service.spreadsheets().values().get(spreadsheetId=sheetsId, range=range).execute()
+    return res.get('values', [])
 
 def logTransaction(symbol: str, id: UUID, event: str, shares: float | str, price: float | str) -> None:
     try:
@@ -90,38 +103,13 @@ def logTransaction(symbol: str, id: UUID, event: str, shares: float | str, price
               "Price:", round(price, 2) if price is float else price, "Total Price:", totalPrice)
 
         # Insert a row at the top
-        requestBody = {
-            "requests": [
-                {
-                    "insertDimension": {
-                        "range": {
-                            "sheetId": "328859340",
-                            "dimension": "ROWS",
-                            "startIndex": 1,
-                            "endIndex": 2
-                        },
-                        "inheritFromBefore": False
-                    }
-                }
-            ]
-        }
+        insertRowAtTop("328859340")
 
-        request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
-        request.execute()
-
-        # Write the message to the top row
-        requestBody = {
-            "range": "Transactions!A2:G2",
-            "majorDimension": "ROWS",
-            "values": [
+        values = [
                 [datetime.now().strftime("%d/%m/%Y: %H:%M:%S"), str(id), symbol, str(event), \
                     str(round(shares, 2)) if shares is float else shares, \
                     str(round(price, 2)) if price is float else price, totalPrice]
             ]
-        }
-
-        request = service.spreadsheets().values().update(spreadsheetId=sheetsId, range="Transactions!A2:G2", \
-            valueInputOption="USER_ENTERED", body=requestBody)
-        request.execute()
+        write("Transactions!A2:G2", values)
     except Exception as e:
         print("Error logging to sheets: " + str(e))
