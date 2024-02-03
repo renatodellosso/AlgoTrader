@@ -7,7 +7,7 @@ import pandas
 import yfinance
 import concurrent.futures
 
-from api import getBuyingPower, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
+from api import getBuyingPower, getEquity, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
 from sheets import log, logTransaction
 from predicting import predictPrices
 from training import train
@@ -86,14 +86,10 @@ def dailyTrade() -> None:
 
     log("Expected changes:" + str(expectedChanges))
 
-    # Cancel all open orders
-    log("Cancelling all open orders...")
-    openOrders = getOpenOrders()
-    for order in openOrders:
-        # Only cancel orders for symbols we are tracking
-        if order.symbol in symbols:
-            tradingClient.cancel_order_by_id(order.id)
-            logTransaction(order.symbol, order.id, "CANCEL-" + order.side, order.qty, order.filled_avg_price)
+    cancelOpenOrders()
+
+    # Key: symbol, Value: shares
+    sellOrders = {}
 
     # Sell symbols where expected change is < 0
     for symbol in symbols:
@@ -101,8 +97,7 @@ def dailyTrade() -> None:
             # Sell
             shares = getPosition(symbol)
             if shares > 0:
-                log("Selling" + str(shares) + "shares of" + symbol + "...")
-                placeSellOrder(symbol, shares)
+                sellOrders[symbol] = shares
 
     # Remove symbols where expected change is < 0 from expectedChanges
     for symbol in symbols:
@@ -120,26 +115,51 @@ def dailyTrade() -> None:
 
     log("Expected changes (% of total): " + str(expectedChanges))
 
+    # Compute target # of shares
+    equity = getEquity()
+    buyOrders = {} # Key: symbol, Value: shares
+    for symbol in expectedChanges:
+        targetValue = expectedChanges[symbol][0] * equity
+
+        # Get current price
+        price = yfinance.Ticker(symbol).info['bid']
+        targetShares = targetValue / price
+
+        # Determine adjustment
+        currentShares = getPosition(symbol)
+        adjustment = targetShares - currentShares
+
+        print("Target value for " + symbol + ": $" + str(round(targetValue, 2)))
+        print("Target shares for " + symbol + ": " + str(round(targetShares, 2)))
+        print("Current shares for " + symbol + ": " + str(round(currentShares, 2)))
+        print("Adjustment for " + symbol + ": " + str(round(adjustment, 2)))
+
+        if adjustment < 0:
+            # Sell
+            sellOrders[symbol] = -adjustment
+        else:
+            # Buy
+            buyOrders[symbol] = adjustment
+
+    # Log orders
+    log("Sell Orders:" + str(sellOrders))
+    log("Buy Orders:" + str(buyOrders))
+
+    # Place sell orders
+    for symbol in sellOrders:
+        log("Selling " + str(sellOrders[symbol]) + " shares of " + symbol + "...")
+        placeSellOrder(symbol, sellOrders[symbol])
+
     # Wait for a few minutes to allow sell orders to complete
     log("Waiting for 10 minutes to allow sell orders to be processed...")
-    time.sleep(60 * 10)
+    for i in range(10):
+        time.sleep(60 * 10)
+        log("Time remaining: " + str(10 - i) + " minutes...")
 
-    # Buy symbols where expected change is > 0
-    buyingPower = getBuyingPower()
-    log("Buying Power: " + str(buyingPower))
-    for symbol in expectedChanges:
-        # Buy
-        if buyingPower > 0:
-            price = yfinance.Ticker(symbol).info['bid']
-            shares = buyingPower * expectedChanges[symbol] / price
-            shares = shares[0] # Not sure how it's ending up as an array
-            
-            if(shares * price < 1):
-                log("Attempting to buy less than $1 of " + symbol + "! Skipping buy order...")
-                continue
-
-            log("Buying " + str(shares) + " shares of " + symbol + "...")
-            placeBuyOrder(symbol, shares)
+    # Place buy orders
+    for symbol in buyOrders:
+        log("Buying " + str(buyOrders[symbol]) + " shares of " + symbol + "...")
+        placeBuyOrder(symbol, buyOrders[symbol])
 
 def getExpectedChange(symbol: str) -> float:
     log("Getting expected change for " + symbol + "...")
@@ -150,7 +170,7 @@ def getExpectedChange(symbol: str) -> float:
         print("Waiting for getPredictedPrices function to finish...")
 
         exception = process.exception()
-        if exception != None:
+        if exception != None: 
             raise exception
         predictions = process.result()
 
@@ -230,3 +250,12 @@ def getPredictedPrices(*args: any) -> tuple | None:
     except Exception as e:
         log("Error getting predicted prices for " + symbol + ": " + str(e))
         return None
+    
+def cancelOpenOrders() -> None:
+    log("Cancelling all open orders...")
+    openOrders = getOpenOrders()
+    for order in openOrders:
+        # Only cancel orders for symbols we are tracking
+        if order.symbol in symbols:
+            tradingClient.cancel_order_by_id(order.id)
+            logTransaction(order.symbol, order.id, "CANCEL-" + order.side, order.qty, order.filled_avg_price)    

@@ -55,6 +55,9 @@ print("Alpaca client initialized!")
 def getBuyingPower() -> float:
     return float(tradingClient.get_account().buying_power)
 
+def getEquity() -> float:
+    return float(tradingClient.get_account().equity)
+
 def getPosition(symbol: str) -> float:
     allPositions = tradingClient.get_all_positions()
     for position in allPositions:
@@ -73,7 +76,7 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
 
     # Check if shares is valid
     if(shares <= 0):
-        print("Invalid number of shares!")
+        log("Invalid number of shares!")
         return False
 
     # Check if we can trade this security
@@ -86,15 +89,24 @@ def placeBuyOrder(symbol: str, shares: float) -> bool:
     price = float(yfinance.Ticker(symbol).info['ask'])
 
     orderCost = price * shares
-    log("Order cost: $" + str(round(orderCost, 2)) + " ($" + str(round(price, 2)) + " * " + str(shares) + ")")
+    print("Order cost: $" + str(round(orderCost, 2)) + " ($" + str(round(price, 2)) + " * " + str(shares) + ")")
+
+    if orderCost < 1:
+        log("Order cost is less than $1! Skipping...")
+        return False
 
     # Check if we have enough money
     balance = getBuyingPower()
-    log("Balance: $" + str(balance))
+    print("Balance: $" + str(balance))
     if(balance < orderCost):
         shares = balance / price
+        orderCost = price * shares
         log("Insufficient funds! Buying " + str(shares) + " shares instead...")
     
+    if orderCost < 1:
+        log("Order cost is less than $1! Skipping...")
+        return False
+
     # Place order
     log("Placing order for " + str(shares) + " shares of " + symbol + " for a total cost of $" + str(orderCost) + "...")
     
