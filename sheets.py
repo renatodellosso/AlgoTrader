@@ -167,5 +167,3 @@ def getTransactionJournalRow(symbol: str) -> int | None:
     except Exception as e:
         print("Error checking if transaction is open: " + str(e))
         return None
-    
-print(getTransactionJournalRow("TEST"))
