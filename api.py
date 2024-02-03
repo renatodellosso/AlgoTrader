@@ -1,3 +1,4 @@
+from datetime import datetime
 import multiprocessing
 from time import sleep
 from alpaca.trading.client import TradingClient
@@ -8,7 +9,7 @@ from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 import yfinance
 from env import alpacaId, alpacaSecret
-from sheets import log, logTransaction
+from sheets import getTransactionJournalRow, insertRowAtTop, log, logTransaction, read, sort, write
 
 # Init client
 print("Initializing Alpaca client...")
@@ -16,16 +17,80 @@ tradingClient = TradingClient(alpacaId, alpacaSecret, paper=True)
 
 # Set up stream
 async def updateHandler(data: RawData) -> None:
-    eventType = data.event
-    order: Order = data.order
-    id = order.id
-    symbol = order.symbol
-    side = order.side
-    shares = order.qty if order.filled_qty == 0 else order.filled_qty
+    try:
+        eventType = data.event
+        order: Order = data.order
+        id = order.id
+        symbol = order.symbol
+        side = order.side
+        shares = order.qty if order.filled_qty == 0 else order.filled_qty
 
-    logTransaction(symbol, id, str(eventType) + "-" + ("BUY" if side == OrderSide.BUY else "SELL"), \
-        float(shares) if shares is not None else "N/A", \
-        float(order.filled_avg_price) if order.filled_avg_price is not None else "N/A")
+        logTransaction(symbol, id, str(eventType) + "-" + ("BUY" if side == OrderSide.BUY else "SELL"), \
+            float(shares) if shares is not None else "N/A", \
+            float(order.filled_avg_price) if order.filled_avg_price is not None else "N/A")
+        
+        if eventType == "fill":
+            if side == OrderSide.BUY:
+                rowIndex = getTransactionJournalRow(symbol)
+
+                if rowIndex is not None:
+                    log("Updating transaction journal...")
+                    
+                    # Update journal
+                    entry = read("Journal!A" + str(rowIndex) + ":D" + str(rowIndex))[0]
+
+                    # Update buy price
+                    avgPrice = (float(entry[1]) * float(entry[3]) + order.filled_avg_price * shares) \
+                        / (float(entry[3]) + shares)
+                    entry[1] = avgPrice
+                    entry[3] = float(entry[3]) + shares
+
+                    write("Journal!A" + str(rowIndex) + ":D" + str(rowIndex), [entry])
+
+                    log("Transaction journal updated!")
+                else:
+                    log("Adding new entry to journal!")
+
+                    # Add new entry
+                    insertRowAtTop("743025071")
+                    write("Journal!A2:K2", \
+                        [[symbol, order.filled_avg_price, datetime.now(), shares, "", "", "10/14/2173 0:00:00", \
+                        "=EQ(D2,G2)", '=IF(H2,F2-C2,"")', '=IF(H2,E2-B2,"")', '=J2>0']])
+            elif side == OrderSide.SELL:
+                rowIndex = getTransactionJournalRow(symbol)
+
+                if rowIndex is not None:
+                    log("Updating transaction journal...")
+
+                    # Update journal
+                    entry = read("Journal!A" + str(rowIndex) + ":G" + str(rowIndex))[0]
+
+                    sharesSold = entry[6]
+                    if sharesSold == "":
+                        sharesSold = 0
+
+                    # Update sell price
+                    if entry[4] == "":
+                        entry[4] = order.filled_avg_price
+                    else:
+                        prevPrice = float(entry[4])
+                        entry[4] = (prevPrice * sharesSold + order.filled_avg_price * shares) \
+                            / (sharesSold + shares)           
+
+                    # Update shares sold
+                    entry[6] = float(sharesSold) + shares
+
+                    # Update sell date
+                    entry[5] = datetime.now()
+
+                    write("Journal!A" + str(rowIndex) + ":H" + str(rowIndex), [entry])
+
+                    log("Transaction journal updated!")
+
+            # Sort sheet so unfilled transactions stay at top
+            sort("743025071", 5)
+    except Exception as e:
+        print("Error handling stream update: " + str(e))
 
 def initStream() -> None:
     print("Initializing Alpaca stream...")

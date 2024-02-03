@@ -1,7 +1,5 @@
 from datetime import datetime
-import gc
 import os.path
-import time
 from uuid import UUID
 
 from google.auth.transport.requests import Request
@@ -13,6 +11,7 @@ import psutil
 import platform
 
 from env import sheetsId
+from stocklist import stocklist
 
 try:
     # If modifying these scopes, delete the file token.json.
@@ -79,6 +78,32 @@ def insertRowAtTop(sheetId: str) -> None:
     request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
     request.execute()
 
+def sort(sheetId: str, sortCol: int) -> None:
+    requestBody = {
+        "requests": [
+            {
+                "sortRange": {
+                    "range": {
+                        "sheetId": sheetId,
+                        "startRowIndex": 1,
+                        "endRowIndex": 1000,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 10
+                    },
+                    "sortSpecs": [
+                        {
+                            "dimensionIndex": sortCol,
+                            "sortOrder": "DESCENDING"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+    request = service.spreadsheets().batchUpdate(spreadsheetId=sheetsId, body=requestBody)
+    request.execute()
+
 def write(range: str, values: list[list[str]]) -> None:
     requestBody = {
         "range": range,
@@ -113,3 +138,34 @@ def logTransaction(symbol: str, id: UUID, event: str, shares: float | str, price
         write("Transactions!A2:G2", values)
     except Exception as e:
         print("Error logging to sheets: " + str(e))
+
+def isTransactionOpen() -> bool:
+    try:
+        res = read("Journal!D2:D2")
+        if res is not None and len(res) > 0:
+            return res[0][0] == "Open"
+        else: return False
+    except Exception as e:
+        print("Error checking if transaction is open: " + str(e))
+        return False
+    
+def getTransactionJournalRow(symbol: str) -> int | None:
+    try:
+        res = read("Journal!A2:H" + str(len(stocklist)))
+        if res is not None and len(res) > 0:
+            for i in range(len(res)):
+                row = res[i]
+
+                # Skip empty rows
+                if len(row) < 7:
+                    continue 
+
+                # If the symbol matches and the sell price is empty, the transaction is open
+                if row[0] == symbol and row[7] == "OPEN":
+                    return i + 2 # Add 2 because we start on the 2nd row
+        return None
+    except Exception as e:
+        print("Error checking if transaction is open: " + str(e))
+        return None
+    
+print(getTransactionJournalRow("TEST"))
