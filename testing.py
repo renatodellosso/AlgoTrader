@@ -175,6 +175,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             continue
 
         buyList = {}
+        sellList = {}
         for symbol in symbols:
             if len(predictedPrices[symbol]) <= i + 1 or len(realPrices[symbol]) <= i + 1:
                 continue
@@ -184,32 +185,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
                 # Add to list to buy
                 buyList[symbol] = diff
             elif symbol in shares and shares[symbol] > 0 and diff < 0:
-                # Sell shares
-                priceDiff = realPrices[symbol][i] - buyPrices[symbol]
-                tradeProfit = shares[symbol] * priceDiff
-                tradeValue = shares[symbol] * realPrices[symbol][i]
-
-                # Log details
-                print("Selling", symbol, "Profit:", tradeProfit, "USD")
-                # print("\tShares:", shares[symbol])
-                # print("\tCurrent Price:", realPrices[symbol][i])
-                # print("\tBuy Price:", buyPrices[symbol])
-                # print("\tPrice Diff:", priceDiff)
-                # print("\tTotal Value:", tradeValue)
-                # print("\tTrade Profit:", tradeProfit)
-
-                # Update profit by symbol
-                if symbol not in profitBySymbol:
-                    profitBySymbol[symbol] = 0
-                # print("\tPrev Profit for Symbol:", profitBySymbol[symbol])
-                profitBySymbol[symbol] += tradeProfit
-                # print("\tNew Profit for Symbol:", profitBySymbol[symbol])
-
-                # Update money and shares
-                # print("\tPrev Money:", money)
-                money += tradeValue
-                # print("\tNew Money:", money)
-                shares[symbol] = 0
+                sellList[symbol] = shares[symbol]
 
         # Convert buy list into % of total
         total = 0
@@ -219,10 +195,52 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         for symbol in buyList:
             buyList[symbol] /= total
 
+        # Caculate total equity
+        totalEquity = money
+        for symbol in symbols:
+            if len(realPrices[symbol]) <= i:
+                totalEquity += shares[symbol] * realPrices[symbol][-1]
+            else:
+                totalEquity += shares[symbol] * realPrices[symbol][i]
+
+        # Calculate adjustment to each stock based on total equity
+        for symbol in buyList:
+            buyList[symbol] *= totalEquity
+            buyList[symbol] /= realPrices[symbol][i]
+
+            # Determine adjustment
+            if shares[symbol] < buyList[symbol]:
+                buyList[symbol] -= shares[symbol]
+            else:
+                sellList[symbol] = shares[symbol] - buyList[symbol]
+                buyList[symbol] = 0
+
+        # Sell everything in sellList
+        for symbol in sellList:
+                # Sell shares
+                priceDiff = realPrices[symbol][i] - buyPrices[symbol]
+                tradeProfit = sellList[symbol] * priceDiff
+                tradeValue = sellList[symbol] * realPrices[symbol][i]
+
+                # Log details
+                print("Selling", symbol, "Profit:", tradeProfit, "USD")
+
+                # Update profit by symbol
+                if symbol not in profitBySymbol:
+                    profitBySymbol[symbol] = 0
+                profitBySymbol[symbol] += tradeProfit
+
+                # Update money and shares
+                money += tradeValue
+                shares[symbol] -= sellList[symbol]
+
         # Buy shares
         buyingPower = money
         for symbol in buyList:
-            shareCount = buyList[symbol] * buyingPower / realPrices[symbol][i]
+            shareCount = buyList[symbol]
+
+            if shareCount == 0:
+                continue
 
             # Generate buy price by weighted average
             if symbol not in buyPrices or shares[symbol] == 0:
