@@ -153,8 +153,8 @@ def dailyTrade() -> None:
     # Wait for a few minutes to allow sell orders to complete
     log("Waiting for 10 minutes to allow sell orders to be processed...")
     for i in range(10):
-        time.sleep(60 * 10)
-        log("Time remaining: " + str(10 - i) + " minutes...")
+        time.sleep(60)
+        print("Time remaining: " + str(10 - i) + " minutes...")
 
     # Place buy orders
     for symbol in buyOrders:
