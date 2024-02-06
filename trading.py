@@ -79,8 +79,8 @@ def dailyTrade() -> None:
         except Exception as e:
             log("Error Predicting Symbol (" + symbol + "):" + str(e))
             expectedChanges[symbol] = 0
-    endTime = datetime.datetime.now()
 
+    endTime = datetime.datetime.now()
     timeTaken = endTime - startTime
     log("Finished predicting symbols! Time taken: " + str(timeTaken))
 
@@ -88,38 +88,23 @@ def dailyTrade() -> None:
 
     cancelOpenOrders()
 
+    (buyList, sellList) = generateBuyAndSellLists(expectedChanges)
+
     # Key: symbol, Value: shares
     sellOrders = {}
 
     # Sell symbols where expected change is < 0
-    for symbol in symbols:
-        if expectedChanges[symbol] < 0:
+    for symbol in sellList:
             # Sell
-            shares = getPosition(symbol)
-            if shares > 0:
-                sellOrders[symbol] = shares
-
-    # Remove symbols where expected change is < 0 from expectedChanges
-    for symbol in symbols:
-        if expectedChanges[symbol] < 0:
-            expectedChanges.pop(symbol)
-
-    # Calculate total expected change
-    totalExpectedChange = 0
-    for symbol in expectedChanges:
-        totalExpectedChange += expectedChanges[symbol]
-
-    # Convert expected changes to percentages of total
-    for symbol in expectedChanges:
-        expectedChanges[symbol] = expectedChanges[symbol] / totalExpectedChange
-
-    log("Expected changes (% of total): " + str(expectedChanges))
+        shares = getPosition(symbol)
+        if shares > 0:
+            sellOrders[symbol] = shares
 
     # Compute target # of shares
     equity = getEquity()
     buyOrders = {} # Key: symbol, Value: shares
-    for symbol in expectedChanges:
-        targetValue = expectedChanges[symbol][0] * equity
+    for symbol, percentage in buyList.items():
+        targetValue = percentage * equity
 
         # Get current price
         price = yfinance.Ticker(symbol).info['bid']
@@ -258,4 +243,30 @@ def cancelOpenOrders() -> None:
         # Only cancel orders for symbols we are tracking
         if order.symbol in symbols:
             tradingClient.cancel_order_by_id(order.id)
-            logTransaction(order.symbol, order.id, "CANCEL-" + order.side, order.qty, order.filled_avg_price)    
+            logTransaction(order.symbol, order.id, "CANCEL-" + order.side, order.qty, order.filled_avg_price)
+
+# Returns (buyList, sellList). Buylist is a dict with symbols as keys and percentage as values. SellList is a list of symbols
+def generateBuyAndSellLists(changes: dict) -> (dict, list[str]):
+    sellList = []
+    buyList = {}
+
+    # Sell symbols where expected change is < 0 and add others to buy list
+    for symbol in changes:
+        if changes[symbol] < 0:
+            # Sell
+            shares = getPosition(symbol)
+            if shares > 0:
+                sellList.append(symbol)
+        else:
+            # Buy
+            buyList[symbol] = changes[symbol]
+
+    # Convert buylist into a percentage of total
+    total = 0
+    for symbol in buyList:
+        total += buyList[symbol]
+
+    for symbol in buyList:
+        buyList[symbol] = buyList[symbol] / total
+
+    return (buyList, sellList)

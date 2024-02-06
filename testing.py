@@ -6,6 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 import yfinance
 from graphing import graphMultiStockTest
 from predicting import predictPrices
+from trading import generateBuyAndSellLists
 from training import train
 from stocklist import stocklist
 
@@ -171,34 +172,30 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     buyPrices = {}
     profitBySymbol = {}
     for i in range(timesteps, len(predictedPrices[symbols[0]]) - 1):
+        dayNum = i - timesteps
+        if dayNum % 100 == 0:
+            print("Day " + str(i-timesteps) + "...")
+
         if len(predictedPrices[symbols[0]]) <= i + 1 or len(realPrices[symbols[0]]) <= i + 1:
             continue
 
-        buyList = {}
-        sellList = {}
+        changes = {}
         for symbol in symbols:
             if len(predictedPrices[symbol]) <= i + 1 or len(realPrices[symbol]) <= i + 1:
                 continue
 
-            diff = predictedPrices[symbol][i + 1][0] - predictedPrices[symbol][i][0]
-            if diff > 0:
-                # Add to list to buy
-                buyList[symbol] = diff
-            elif symbol in shares and shares[symbol] > 0 and diff < 0:
-                sellList[symbol] = shares[symbol]
+            diff = (predictedPrices[symbol][i + 1][0] - predictedPrices[symbol][i][0]) / predictedPrices[symbol][i][0]
+            changes[symbol] = diff
+            
+        (buyList, sellList) = generateBuyAndSellLists(changes)
 
-        # Convert buy list into % of total
-        total = 0
-        for symbol in buyList:
-            total += buyList[symbol]
-
-        for symbol in buyList:
-            buyList[symbol] /= total
+        # Convert sellList to a dict, where key is symbol and value is number of shares to sell
+        sellList = {symbol: shares[symbol] if symbol in shares else 0 for symbol in sellList}
 
         # Caculate total equity
         totalEquity = money
         for symbol in symbols:
-            if len(realPrices[symbol]) <= i:
+            if len(realPrices[symbol]) <= i and symbol in shares:
                 totalEquity += shares[symbol] * realPrices[symbol][-1]
             else:
                 totalEquity += shares[symbol] * realPrices[symbol][i]
@@ -216,29 +213,30 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
                 buyList[symbol] = 0
 
         # Sell everything in sellList
-        for symbol in sellList:
-                # Sell shares
-                priceDiff = realPrices[symbol][i] - buyPrices[symbol]
-                tradeProfit = sellList[symbol] * priceDiff
-                tradeValue = sellList[symbol] * realPrices[symbol][i]
+        for symbol, shareCount in sellList.items():
+            if shareCount <= 0:
+                continue
 
-                # Log details
-                print("Selling", symbol, "Profit:", tradeProfit, "USD")
+            # Sell shares
+            priceDiff = realPrices[symbol][i] - buyPrices[symbol]
+            tradeProfit = shareCount * priceDiff
+            tradeValue = shareCount * realPrices[symbol][i]
 
-                # Update profit by symbol
-                if symbol not in profitBySymbol:
-                    profitBySymbol[symbol] = 0
-                profitBySymbol[symbol] += tradeProfit
+            # Log details
+            print("Selling", shareCount, "shares of", symbol, "Profit:", tradeProfit, "USD")
 
-                # Update money and shares
-                money += tradeValue
-                shares[symbol] -= sellList[symbol]
+            # Update profit by symbol
+            if symbol not in profitBySymbol:
+                profitBySymbol[symbol] = 0
+            profitBySymbol[symbol] += tradeProfit
+
+            # Update money and shares
+            money += tradeValue
+            shares[symbol] -= shareCount
 
         # Buy shares
-        buyingPower = money
-        for symbol in buyList:
-            shareCount = buyList[symbol]
-
+        buyingPower = round(money, 4)
+        for symbol, shareCount in buyList.items():
             if shareCount == 0:
                 continue
 
@@ -246,13 +244,14 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             if symbol not in buyPrices or shares[symbol] == 0:
                 buyPrices[symbol] = realPrices[symbol][i]
             else:
-                buyPrices[symbol] = (realPrices[symbol][i] * shareCount + buyPrices[symbol] * shares[symbol]) / (shareCount + shares[symbol])
+                buyPrices[symbol] = round((realPrices[symbol][i] * shareCount + buyPrices[symbol] * shares[symbol]) \
+                    / (shareCount + shares[symbol]), 4)
 
             if symbol not in shares:
                 shares[symbol] = 0
 
-            shares[symbol] += buyList[symbol] * buyingPower / realPrices[symbol][i]
-            money -= buyList[symbol] * buyingPower
+            shares[symbol] += round(buyList[symbol] * buyingPower / realPrices[symbol][i], 4)
+            money -= round(buyList[symbol] * buyingPower, 4)
 
         # Calculate net worth
         netWorthToday = money
@@ -263,6 +262,17 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
                 netWorthToday += shares[symbol] * realPrices[symbol][i]
         
         netWorth.append(netWorthToday)
+
+        # Round shares to 4 decimal places
+        for symbol in shares:
+            shares[symbol] = round(shares[symbol], 4)
+        
+        # Round buy prices to 4 decimal places
+        for symbol in buyPrices:
+            buyPrices[symbol] = round(buyPrices[symbol], 4)
+        
+        # Round money to 4 decimal places
+        money = round(money, 4)
 
         # Print progress
         # print("Day " + str(i) + ":", netWorthToday, "Money:", money)
