@@ -252,7 +252,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
             buyList[symbol] = round(buyList[symbol], 4)
 
-            shares[symbol] += round(buyList[symbol] * buyingPower / realPrices[symbol][i], 4)
+            shares[symbol] += round(buyList[symbol] * buyingPower / round(realPrices[symbol][i], 4), 4)
             money -= round(buyList[symbol] * buyingPower, 4)
 
         # Calculate net worth
