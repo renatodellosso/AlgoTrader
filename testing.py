@@ -174,7 +174,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     for i in range(timesteps, len(predictedPrices[symbols[0]]) - 1):
         dayNum = i - timesteps
         if dayNum % 100 == 0:
-            print("Day " + str(i-timesteps) + "...")
+            print("Day " + str(i-timesteps) + "/" + str(len(predictedPrices[symbols[0]])-timesteps) + "...")
 
         if len(predictedPrices[symbols[0]]) <= i + 1 or len(realPrices[symbols[0]]) <= i + 1:
             continue
@@ -196,9 +196,9 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         totalEquity = money
         for symbol in symbols:
             if len(realPrices[symbol]) <= i and symbol in shares:
-                totalEquity += shares[symbol] * realPrices[symbol][-1]
+                totalEquity += round(shares[symbol], 4) * round(realPrices[symbol][-1], 4)
             else:
-                totalEquity += shares[symbol] * realPrices[symbol][i]
+                totalEquity += round(shares[symbol], 4) * round(realPrices[symbol][i], 4)
 
         # Calculate adjustment to each stock based on total equity
         for symbol in buyList:
@@ -223,7 +223,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             tradeValue = shareCount * realPrices[symbol][i]
 
             # Log details
-            print("Selling", shareCount, "shares of", symbol, "Profit:", tradeProfit, "USD")
+            # print("Selling", shareCount, "shares of", symbol, "Profit:", tradeProfit, "USD")
 
             # Update profit by symbol
             if symbol not in profitBySymbol:
@@ -244,16 +244,17 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             if symbol not in buyPrices or shares[symbol] == 0:
                 buyPrices[symbol] = realPrices[symbol][i]
             else:
-                buyPrices[symbol] = round((realPrices[symbol][i] * shareCount + buyPrices[symbol] * shares[symbol]) \
-                    / (shareCount + shares[symbol]), 4)
+                buyPrices[symbol] = round((round(realPrices[symbol][i], 4) * round(shareCount, 4) \
+                    + round(buyPrices[symbol], 4) * round(shares[symbol], 4)) \
+                    / (round(shareCount, 4) + round(shares[symbol], 4)), 4)
 
             if symbol not in shares:
                 shares[symbol] = 0
 
             buyList[symbol] = round(buyList[symbol], 4)
 
-            shares[symbol] += round(buyList[symbol] * buyingPower / round(realPrices[symbol][i], 4), 4)
-            money -= round(buyList[symbol] * buyingPower, 4)
+            shares[symbol] += round(round(buyList[symbol], 4) * round(buyingPower, 4) / round(realPrices[symbol][i], 4), 4)
+            money -= round(round(buyList[symbol], 4) * round(buyingPower, 4), 4)
 
         # Calculate net worth
         netWorthToday = money
