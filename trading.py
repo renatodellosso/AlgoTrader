@@ -247,7 +247,7 @@ def cancelOpenOrders() -> None:
             logTransaction(order.symbol, order.id, "CANCEL-" + order.side, order.qty, order.filled_avg_price)
 
 # Returns (buyList, sellList). Buylist is a dict with symbols as keys and percentage as values. SellList is a list of symbols
-def generateBuyAndSellLists(changes: dict) -> (dict, list[str]):
+def generateBuyAndSellLists(changes: dict) -> tuple[dict, list[str]]:
     sellList = []
     buyList = {}
 
@@ -269,6 +269,9 @@ def generateBuyAndSellLists(changes: dict) -> (dict, list[str]):
 
     for symbol in buyList:
         # print(type(buyList[symbol]), type(total))
-        buyList[symbol] = round(buyList[symbol], 4) / round(total, 4)
+        if total != 0:
+            buyList[symbol] = round(buyList[symbol], 4) / round(total, 4)
+        else:
+            buyList[symbol] = 0
 
     return (buyList, sellList)

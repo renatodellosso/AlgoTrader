@@ -203,7 +203,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         # Calculate adjustment to each stock based on total equity
         for symbol in buyList:
             buyList[symbol] *= totalEquity
-            buyList[symbol] /= realPrices[symbol][i]
+            buyList[symbol] /= realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1]
 
             # Determine adjustment
             if shares[symbol] < buyList[symbol]:
@@ -241,6 +241,9 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             if shareCount == 0:
                 continue
 
+            if symbol not in shares:
+                shares[symbol] = 0
+            
             # Generate buy price by weighted average
             if symbol not in buyPrices or shares[symbol] == 0:
                 buyPrices[symbol] = realPrices[symbol][i]
@@ -249,13 +252,11 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
                     + round(buyPrices[symbol], 4) * round(shares[symbol], 4)) \
                     / (round(shareCount, 4) + round(shares[symbol], 4)), 4)
 
-            if symbol not in shares:
-                shares[symbol] = 0
-
             buyList[symbol] = round(buyList[symbol], 4)
 
             shares[symbol] = round(shares[symbol], 4)
-            shares[symbol] += round(round(buyList[symbol], 4) * round(buyingPower, 4) / round(realPrices[symbol][i], 4), 4)
+            shares[symbol] += round(round(buyList[symbol], 4) * round(buyingPower, 4) \
+                / round(realPrices[symbol][i], 4), 4)
             money = round(money, 4)
             money -= round(round(buyList[symbol], 4) * round(buyingPower, 4), 4)
 
@@ -325,5 +326,4 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     graphMultiStockTest(netWorth)
 
 if __name__ == "__main__":
-    testMultiStock(stocklist, days=365*2, trainingRatio=0.4)
-    # testSingleStock(stocklist, days=365*5, trainingRatio=0.8)
+    testMultiStock(stocklist, days=365*20, trainingRatio=0.4)
