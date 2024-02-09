@@ -253,6 +253,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
             buyList[symbol] = round(buyList[symbol], 4)
 
+            shares[symbol] = round(shares[symbol], 4)
             shares[symbol] += round(round(buyList[symbol], 4) * round(buyingPower, 4) / round(realPrices[symbol][i], 4), 4)
             money -= round(round(buyList[symbol], 4) * round(buyingPower, 4), 4)
 
@@ -305,10 +306,10 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     years = days / 365
     annualizedReturn = (1 + profitPercent) ** (1 / years) - 1
 
-    print("Days Elapsed: ", days)
-    print("Years Elapsed: ", years)
-    print("Shares: ", shares)
-    print("Money: ", money)
+    print("Days Elapsed:", days)
+    print("Years Elapsed:", years)
+    print("Shares:", shares)
+    print("Money:", money)
     print("Profit:", round(profit, 2))
     print("Profit %:", round(profitPercent * 100, 2))
     print("Annualized Return %:", round(annualizedReturn * 100, 2))
@@ -323,3 +324,4 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
 if __name__ == "__main__":
     testMultiStock(stocklist, days=365*20, trainingRatio=0.4)
+    # testSingleStock(stocklist, days=365*5, trainingRatio=0.8)

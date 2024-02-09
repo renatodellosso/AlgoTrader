@@ -264,9 +264,9 @@ def generateBuyAndSellLists(changes: dict) -> (dict, list[str]):
     # Convert buylist into a percentage of total
     total = 0
     for symbol in buyList:
-        total += buyList[symbol]
+        total += round(buyList[symbol], 4)
 
     for symbol in buyList:
-        buyList[symbol] = buyList[symbol] / total
+        buyList[symbol] = round(buyList[symbol], 4) / round(total, 4)
 
     return (buyList, sellList)
