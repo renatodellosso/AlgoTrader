@@ -231,8 +231,9 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             profitBySymbol[symbol] += tradeProfit
 
             # Update money and shares
-            money += tradeValue
-            shares[symbol] -= shareCount
+            money = round(money, 4)
+            money += round(tradeValue, 4)
+            shares[symbol] -= round(shareCount, 4)
 
         # Buy shares
         buyingPower = round(money, 4)
@@ -255,6 +256,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
             shares[symbol] = round(shares[symbol], 4)
             shares[symbol] += round(round(buyList[symbol], 4) * round(buyingPower, 4) / round(realPrices[symbol][i], 4), 4)
+            money = round(money, 4)
             money -= round(round(buyList[symbol], 4) * round(buyingPower, 4), 4)
 
         # Calculate net worth
@@ -323,5 +325,5 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     graphMultiStockTest(netWorth)
 
 if __name__ == "__main__":
-    testMultiStock(stocklist, days=365*20, trainingRatio=0.4)
+    testMultiStock(stocklist, days=365*2, trainingRatio=0.4)
     # testSingleStock(stocklist, days=365*5, trainingRatio=0.8)

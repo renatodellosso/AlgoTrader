@@ -6,6 +6,7 @@ from pandas import DataFrame
 import pandas
 import yfinance
 import concurrent.futures
+from numpy import float64
 
 from api import getBuyingPower, getEquity, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
 from sheets import log, logTransaction
@@ -259,7 +260,7 @@ def generateBuyAndSellLists(changes: dict) -> (dict, list[str]):
                 sellList.append(symbol)
         else:
             # Buy
-            buyList[symbol] = changes[symbol]
+            buyList[symbol] = float64(changes[symbol])
 
     # Convert buylist into a percentage of total
     total = 0
@@ -267,6 +268,7 @@ def generateBuyAndSellLists(changes: dict) -> (dict, list[str]):
         total += round(buyList[symbol], 4)
 
     for symbol in buyList:
+        # print(type(buyList[symbol]), type(total))
         buyList[symbol] = round(buyList[symbol], 4) / round(total, 4)
 
     return (buyList, sellList)
