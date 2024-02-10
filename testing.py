@@ -243,12 +243,14 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
             if symbol not in shares:
                 shares[symbol] = 0
+
+            realPrice = realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1]
             
             # Generate buy price by weighted average
             if symbol not in buyPrices or shares[symbol] == 0:
-                buyPrices[symbol] = realPrices[symbol][i]
+                buyPrices[symbol] = realPrice
             else:
-                buyPrices[symbol] = round((round(realPrices[symbol][i], 4) * round(shareCount, 4) \
+                buyPrices[symbol] = round((round(realPrice, 4) * round(shareCount, 4) \
                     + round(buyPrices[symbol], 4) * round(shares[symbol], 4)) \
                     / (round(shareCount, 4) + round(shares[symbol], 4)), 4)
 
@@ -256,17 +258,15 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
             shares[symbol] = round(shares[symbol], 4)
             shares[symbol] += round(round(buyList[symbol], 4) * round(buyingPower, 4) \
-                / round(realPrices[symbol][i], 4), 4)
+                / round(realPrice, 4), 4)
             money = round(money, 4)
             money -= round(round(buyList[symbol], 4) * round(buyingPower, 4), 4)
 
         # Calculate net worth
         netWorthToday = money
         for symbol in symbols:
-            if len(realPrices[symbol]) <= i:
-                netWorthToday += shares[symbol] * realPrices[symbol][-1]
-            else:
-                netWorthToday += shares[symbol] * realPrices[symbol][i]
+            netWorthToday += round(shares[symbol], 4) \
+                * round(realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1], 4)
         
         netWorth.append(netWorthToday)
 
