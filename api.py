@@ -221,3 +221,6 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
 
     log("Order placed!")
     return True
+
+def getCryptoPair(paySymbol: str, receiveSymbol: str) -> str:
+    res = tradingClient.get("")

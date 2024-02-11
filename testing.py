@@ -196,9 +196,9 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         totalEquity = money
         for symbol in symbols:
             if len(realPrices[symbol]) <= i and symbol in shares:
-                totalEquity += round(shares[symbol], 4) * round(realPrices[symbol][-1], 4)
+                totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][-1], 3)
             else:
-                totalEquity += round(shares[symbol], 4) * round(realPrices[symbol][i], 4)
+                totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][i], 3)
 
         # Calculate adjustment to each stock based on total equity
         for symbol in buyList:
@@ -231,12 +231,12 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             profitBySymbol[symbol] += tradeProfit
 
             # Update money and shares
-            money = round(money, 4)
-            money += round(tradeValue, 4)
-            shares[symbol] -= round(shareCount, 4)
+            money = round(money, 3)
+            money += round(tradeValue, 3)
+            shares[symbol] -= round(shareCount, 3)
 
         # Buy shares
-        buyingPower = round(money, 4)
+        buyingPower = round(money, 3)
         for symbol, shareCount in buyList.items():
             if shareCount == 0:
                 continue
@@ -247,39 +247,42 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             realPrice = realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1]
             
             # Generate buy price by weighted average
+            if shareCount + shares[symbol] == 0:
+                print("Error: shareCount + shares[symbol] == 0")
+
             if symbol not in buyPrices or shares[symbol] == 0:
                 buyPrices[symbol] = realPrice
             else:
-                buyPrices[symbol] = round((round(realPrice, 4) * round(shareCount, 4) \
-                    + round(buyPrices[symbol], 4) * round(shares[symbol], 4)) \
-                    / (round(shareCount, 4) + round(shares[symbol], 4)), 4)
+                buyPrices[symbol] = round((round(realPrice, 3) * round(shareCount, 3) \
+                    + round(buyPrices[symbol], 3) * round(shares[symbol], 3)) \
+                    / (round(shareCount, 3) + round(shares[symbol], 3)), 3)
 
-            buyList[symbol] = round(buyList[symbol], 4)
+            buyList[symbol] = round(buyList[symbol], 3)
 
-            shares[symbol] = round(shares[symbol], 4)
-            shares[symbol] += round(round(buyList[symbol], 4) * round(buyingPower, 4) \
-                / round(realPrice, 4), 4)
-            money = round(money, 4)
-            money -= round(round(buyList[symbol], 4) * round(buyingPower, 4), 4)
+            shares[symbol] = round(shares[symbol], 3)
+            shares[symbol] += round(round(buyList[symbol], 3) * round(buyingPower, 3) \
+                / round(realPrice, 3), 3)
+            money = round(money, 3)
+            money -= round(round(buyList[symbol], 3) * round(buyingPower, 3), 3)
 
         # Calculate net worth
         netWorthToday = money
         for symbol in symbols:
-            netWorthToday += round(shares[symbol], 4) \
-                * round(realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1], 4)
+            netWorthToday += round(shares[symbol], 3) \
+                * round(realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1], 3)
         
         netWorth.append(netWorthToday)
 
         # Round shares to 4 decimal places
         for symbol in shares:
-            shares[symbol] = round(shares[symbol], 4)
+            shares[symbol] = round(shares[symbol], 3)
         
         # Round buy prices to 4 decimal places
         for symbol in buyPrices:
-            buyPrices[symbol] = round(buyPrices[symbol], 4)
+            buyPrices[symbol] = round(buyPrices[symbol], 3)
         
         # Round money to 4 decimal places
-        money = round(money, 4)
+        money = round(money, 3)
 
         # Print progress
         # print("Day " + str(i) + ":", netWorthToday, "Money:", money)

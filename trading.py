@@ -205,7 +205,7 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         # Train model
         log("Training model for " + symbol + "...")
-        model = train(data, 40, symbol)
+        model = train(data, 30, symbol)
 
         if(model == None):
             log("Model is None!")
@@ -219,11 +219,11 @@ def getPredictedPrices(*args: any) -> tuple | None:
         todayPrice = data.iloc[-1]['Close']
 
         # Get predicted prices
-        predictedPrices = predictPrices(model, data[int(len(data)*0.8):], 40)
+        predictedPrices = predictPrices(model, data[int(len(data)*0.8):], 30)
         predictedPriceToday = predictedPrices[-2] # It's possible this is actually yesterday's price
         predictedPriceTmr = predictedPrices[-1] # Might be today's price
-        # predictedPriceToday = predictToday(model, data, 40)
-        # predictedPriceTmr = predictTomorrow(model, data, 40)
+        # predictedPriceToday = predictToday(model, data, 30)
+        # predictedPriceTmr = predictTomorrow(model, data, 30)
 
         # Delete unneeded variables to free up ram
         del model, data
@@ -265,12 +265,12 @@ def generateBuyAndSellLists(changes: dict) -> tuple[dict, list[str]]:
     # Convert buylist into a percentage of total
     total = 0
     for symbol in buyList:
-        total += round(buyList[symbol], 4)
+        total += round(buyList[symbol], 3)
 
     for symbol in buyList:
         # print(type(buyList[symbol]), type(total))
         if total != 0:
-            buyList[symbol] = round(buyList[symbol], 4) / round(total, 4)
+            buyList[symbol] = round(buyList[symbol], 3) / round(total, 3)
         else:
             buyList[symbol] = 0
 
