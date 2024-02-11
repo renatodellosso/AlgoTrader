@@ -7,6 +7,7 @@ from alpaca.common import RawData
 from alpaca.broker.client import Asset, Order
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
+import requests
 import yfinance
 from env import alpacaId, alpacaSecret
 from sheets import getTransactionJournalRow, insertRowAtTop, log, logTransaction, read, sort, write
@@ -222,5 +223,22 @@ def placeSellOrder(symbol: str, shares: float) -> bool:
     log("Order placed!")
     return True
 
-def getCryptoPair(paySymbol: str, receiveSymbol: str) -> str:
-    res = tradingClient.get("")
+def getCryptoPair(paySymbol: str, receiveSymbol: str, tryFlip: bool = True) -> float | None:
+    symbol = paySymbol + "/" + receiveSymbol
+
+    url = "https://data.alpaca.markets/v1beta3/crypto/us/latest/quotes?symbols=" + symbol
+    headers = {"accept": "application/json"}
+
+    response = requests.get(url, headers=headers)
+    
+    json = response.json()
+
+    try:
+        return json["quotes"][symbol]["ap"]
+    except KeyError:
+        if tryFlip:
+            return 1 / getCryptoPair(receiveSymbol, paySymbol, False)
+        return False
+
+print(getCryptoPair("BTC", "ETH"))
+print(getCryptoPair("ETH", "BTC"))

@@ -11,7 +11,7 @@ import psutil
 import platform
 
 from env import sheetsId
-from stocklist import stocklist
+from ml.stocklist import stocklist
 
 try:
     # If modifying these scopes, delete the file token.json.
