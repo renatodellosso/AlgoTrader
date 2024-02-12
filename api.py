@@ -1,6 +1,8 @@
 from datetime import datetime
-import multiprocessing
+from multiprocessing import Process
+from multiprocessing.managers import DictProxy
 from time import sleep
+from typing import Callable
 from alpaca.trading.client import TradingClient
 from alpaca.trading.stream import TradingStream
 from alpaca.common import RawData
@@ -16,8 +18,29 @@ from sheets import getTransactionJournalRow, insertRowAtTop, log, logTransaction
 print("Initializing Alpaca client...")
 tradingClient = TradingClient(alpacaId, alpacaSecret, paper=True)
 
+tradeCallbacks: list[Callable[[RawData, DictProxy], None]] = []
+
 # Set up stream
 async def updateHandler(data: RawData) -> None:
+    print("Stream update received!")
+
+    # Trade callbacks is sometimes a single function, so we need to convert it to a list
+    # Don't know how it ends up as a single function, but it does
+    global tradeCallbacks, sharedData
+    if tradeCallbacks is not list:
+        tradeCallbacks = [tradeCallbacks]
+
+    # Run callbacks
+    print("Running trade callbacks...")
+    try:
+        for callback in tradeCallbacks:
+            # I have no clue why this is necessary, but it is
+            while type(callback) is list:
+                callback = callback[0]
+            callback(data, sharedData)
+    except Exception as e:
+        print("Error running trade callbacks: " + str(e))
+
     try:
         eventType = data.event
         order: Order = data.order
@@ -30,6 +53,8 @@ async def updateHandler(data: RawData) -> None:
             float(shares) if shares is not None else "N/A", \
             float(order.filled_avg_price) if order.filled_avg_price is not None else "N/A")
         
+        return
+
         if eventType == "fill":
             if side == OrderSide.BUY:
                 rowIndex = getTransactionJournalRow(symbol)
@@ -93,17 +118,29 @@ async def updateHandler(data: RawData) -> None:
     except Exception as e:
         print("Error handling stream update: " + str(e))
 
-def initStream() -> None:
+def initStream(callbacks: list[Callable[[RawData, DictProxy], None]], sharedDict: DictProxy | None) -> None:
     print("Initializing Alpaca stream...")
+
+    global tradeCallbacks
+    tradeCallbacks = callbacks
+    print("Trade callbacks set!")
+
+    global sharedData
+    sharedData = sharedDict
+
     tradingStream = TradingStream(alpacaId, alpacaSecret, paper=True)
     tradingStream.subscribe_trade_updates(updateHandler)
+
+    print("Alpaca stream running...")
     tradingStream.run()
+
+    print("Alpaca stream stopping...")
     tradingStream.stop()
 
-def startStreamProcess() -> multiprocessing.Process:
-    process = multiprocessing.Process(target=initStream)
+def startStreamProcess(sharedDict: DictProxy = None) -> None:
+    process = Process(target=initStream, args=(tradeCallbacks, sharedDict))
     process.start()
-    print("Alpaca stream process started!")
+    print("Alpaca stream process started! Exit code:", process.exitcode)
 
 if __name__ == "__main__":
     process = startStreamProcess()
@@ -115,7 +152,7 @@ if __name__ == "__main__":
             print("Exiting...")
             process.terminate()
             exit()
-        
+
 print("Alpaca client initialized!")
 
 def getBuyingPower() -> float:
@@ -240,3 +277,27 @@ def getCryptoPair(paySymbol: str, receiveSymbol: str, tryFlip: bool = True) -> f
         if tryFlip:
             return 1 / getCryptoPair(receiveSymbol, paySymbol, False)
         return None
+    
+def buyCrypto(buySymbol: str, paySymbol: str, payAmt: float | None = None) -> None:
+    if payAmt is None:
+        payAmt = getPosition(paySymbol + "USD")
+
+    print("Buying", buySymbol, "with", payAmt, paySymbol)
+
+    # Check if we have enough of the pay symbol
+    payPosition = getPosition(paySymbol + "USD")
+    payAmt = min(payAmt, payPosition)
+
+    # Find the right symbol to buy
+    symbol = buySymbol + "/" + paySymbol
+    try:
+        tradingClient.get_asset(symbol)
+    except:
+        symbol = paySymbol + "/" + buySymbol
+
+    print("Using symbol", symbol)
+
+    # Generate order data
+    orderData = MarketOrderRequest(symbol=symbol, qty=payAmt, side=OrderSide.BUY, time_in_force=TimeInForce.GTC)
+    tradingClient.submit_order(orderData)
+    print("Order placed!")
