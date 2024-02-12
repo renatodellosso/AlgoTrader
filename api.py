@@ -236,9 +236,7 @@ def getCryptoPair(paySymbol: str, receiveSymbol: str, tryFlip: bool = True) -> f
     try:
         return json["quotes"][symbol]["ap"]
     except KeyError:
+        # We may want to remove this. It's unclear if we can go backwards
         if tryFlip:
             return 1 / getCryptoPair(receiveSymbol, paySymbol, False)
-        return False
-
-print(getCryptoPair("BTC", "ETH"))
-print(getCryptoPair("ETH", "BTC"))
+        return None
