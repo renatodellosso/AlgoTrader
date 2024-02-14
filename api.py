@@ -314,9 +314,9 @@ def buyCrypto(buySymbol: str, paySymbol: str, payAmt: float | None = None) -> No
         else getCryptoPair(buySymbol, paySymbol)
     # print("Pair:", pair, buySymbol, "per", paySymbol)
     # print("Pay amount:", payAmt, paySymbol)
-    if paySymbol == "USD":
-        payAmt = math.floor(payAmt) * 0.9
-        # print("Pay amount (floored, 90%):", payAmt, paySymbol)
+    if "USD" in symbol:
+        payAmt = math.floor(payAmt) * 0.95
+        # print("Pay amount (floored, 95%):", payAmt, paySymbol)
     buyAmt = payAmt / pair
     # print("Buy amount:", buyAmt, buySymbol)
 
