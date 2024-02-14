@@ -2,6 +2,7 @@ from multiprocessing.managers import DictProxy
 import sys
 from time import sleep
 from alpaca.common import RawData
+from alpaca.trading.enums import OrderSide
 from multiprocessing import Manager
 
 sys.path.append('../AlgoTrader')
@@ -47,7 +48,8 @@ def tradeCallback(data: RawData, transactionOrder: DictProxy):
     symbol = data.order.symbol
     event = data.event
 
-    baseSymbol = symbol.split("/")[0]
+    print(data.order.side)
+    baseSymbol = symbol.split("/")[int(data.order.side != OrderSide.BUY)]
     print("Trade callback! Symbol:", symbol, "Event:", event, "Base Symbol:", baseSymbol)
 
     if event == "fill":
@@ -78,11 +80,10 @@ def updateTransactionOrder():
     # Find the best triangle
     bestTriangle = max(triangles, key=triangles.get)
 
-    print("Best triangle:", bestTriangle, ":", triangles[bestTriangle])
+    # print("Best triangle:", bestTriangle, ":", triangles[bestTriangle])
 
     global transactionOrder
-    print("Transaction order before:", transactionOrder)
-    transactionOrder.clear()
+    # print("Transaction order before:", transactionOrder)
     transactionOrder["USD"] = bestTriangle[0]
     transactionOrder[bestTriangle[0]] = bestTriangle[1]
     transactionOrder[bestTriangle[1]] = "USD"
@@ -101,7 +102,13 @@ if __name__ == "__main__":
         "USDC": ("AAVE", "AVAX", "BAT", "BCH", "BTC", "CRV", "DOT", "ETH", "GRT", "LINK", "LTC", "MKR", "SHIB", "UNI", "XTZ")
     }
 
+    isFirstTime = True
     while True:
         updateTransactionOrder()
         print("Transaction order:", transactionOrder)
+
+        if isFirstTime:
+            buyCrypto(transactionOrder["USD"], "USD")
+
+        isFirstTime = False
         sleep(60)

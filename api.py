@@ -1,4 +1,5 @@
 from datetime import datetime
+import math
 from multiprocessing import Process
 from multiprocessing.managers import DictProxy
 from time import sleep
@@ -280,24 +281,48 @@ def getCryptoPair(paySymbol: str, receiveSymbol: str, tryFlip: bool = True) -> f
     
 def buyCrypto(buySymbol: str, paySymbol: str, payAmt: float | None = None) -> None:
     if payAmt is None:
-        payAmt = getPosition(paySymbol + "USD")
+        if paySymbol == "USD":
+            payAmt = getBuyingPower()
+        else:
+            payAmt = getPosition(paySymbol + "USD")
+    else:
+        if paySymbol == "USD":
+            payPosition = getBuyingPower()
+        else:
+            payPosition = getPosition(paySymbol + "USD")
 
     print("Buying", buySymbol, "with", payAmt, paySymbol)
 
     # Check if we have enough of the pay symbol
-    payPosition = getPosition(paySymbol + "USD")
-    payAmt = min(payAmt, payPosition)
+    if 'payPosition' in locals():
+        payAmt = min(payAmt, payPosition)
 
     # Find the right symbol to buy
     symbol = buySymbol + "/" + paySymbol
+    side = OrderSide.BUY
     try:
         tradingClient.get_asset(symbol)
     except:
         symbol = paySymbol + "/" + buySymbol
+        side = OrderSide.SELL
 
-    print("Using symbol", symbol)
+    # print("Using symbol", symbol)
+
+    # Convert payAmt to amt of buySymbol
+    pair = 1 / getCryptoPair(paySymbol, buySymbol) \
+        if side == OrderSide.BUY \
+        else getCryptoPair(buySymbol, paySymbol)
+    # print("Pair:", pair, buySymbol, "per", paySymbol)
+    # print("Pay amount:", payAmt, paySymbol)
+    if paySymbol == "USD":
+        payAmt = math.floor(payAmt) * 0.9
+        # print("Pay amount (floored, 90%):", payAmt, paySymbol)
+    buyAmt = payAmt / pair
+    # print("Buy amount:", buyAmt, buySymbol)
 
     # Generate order data
-    orderData = MarketOrderRequest(symbol=symbol, qty=payAmt, side=OrderSide.BUY, time_in_force=TimeInForce.GTC)
+    orderData = MarketOrderRequest(symbol=symbol, qty=buyAmt if side == OrderSide.BUY else payAmt, \
+        side=side, time_in_force=TimeInForce.GTC)
+    # print("Order data:", orderData)
     tradingClient.submit_order(orderData)
     print("Order placed!")
