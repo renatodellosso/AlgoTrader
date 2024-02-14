@@ -267,7 +267,11 @@ def getCryptoPair(paySymbol: str, receiveSymbol: str, tryFlip: bool = True) -> f
     url = "https://data.alpaca.markets/v1beta3/crypto/us/latest/quotes?symbols=" + symbol
     headers = {"accept": "application/json"}
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
+    except requests.exceptions.RequestException as e:
+        print("Error fetching crypto pair", symbol, ":", e)
+        return None
     
     json = response.json()
 

@@ -40,9 +40,10 @@ def getOptimalTriangle(firstSymbol: str, secondSymbol: str) -> tuple[tuple[str, 
     if(triangle is None):
         return None
     
+    # print("Triangle:", firstSymbol, secondSymbol, ":", triangle)
     if triangle > 1:
         return (firstSymbol, secondSymbol), triangle
-    return (secondSymbol, firstSymbol), 1 / triangle
+    return getOptimalTriangle(secondSymbol, firstSymbol)
 
 def tradeCallback(data: RawData, transactionOrder: DictProxy):
     symbol = data.order.symbol
@@ -80,9 +81,28 @@ def updateTransactionOrder():
     # Find the best triangle
     bestTriangle = max(triangles, key=triangles.get)
 
-    # print("Best triangle:", bestTriangle, ":", triangles[bestTriangle])
+    # Remove all triangles with profits less than 0.25% (this is the fee for the trade)
+    # See herer: https://docs.alpaca.markets/docs/crypto-fees
+    triangles = {k: v for k, v in triangles.items() if v > 1.0025}
 
     global transactionOrder
+    if len(triangles) == 0:
+        print("No profitable triangles found")
+        print("Best triangle:", bestTriangle)
+
+        # Set everything in transaction to point to USD and delete USD
+        for key in transactionOrder.keys():
+            transactionOrder[key] = "USD"
+        if "USD" in transactionOrder:
+            del transactionOrder["USD"]
+        
+        return
+
+    print("Triangles:", triangles)
+    print("Best triangle:", bestTriangle, ":", triangles[bestTriangle])
+
+    # print("Best triangle:", bestTriangle, ":", triangles[bestTriangle])
+
     # print("Transaction order before:", transactionOrder)
     transactionOrder["USD"] = bestTriangle[0]
     transactionOrder[bestTriangle[0]] = bestTriangle[1]
