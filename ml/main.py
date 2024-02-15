@@ -1,5 +1,7 @@
-from sheets import log
 from trading import startLoop
+import sys
+sys.path.append('../AlgoTrader')
+from sheets import log
 from api import startStreamProcess
 from stocklist import stocklist
 

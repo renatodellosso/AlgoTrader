@@ -1,10 +1,10 @@
 from multiprocessing.managers import DictProxy
-import sys
 from time import sleep
 from alpaca.common import RawData
 from alpaca.trading.enums import OrderSide
 from multiprocessing import Manager
 
+import sys
 sys.path.append('../AlgoTrader')
 from api import buyCrypto, getCryptoPair, startStreamProcess, tradeCallbacks
 

@@ -8,6 +8,8 @@ import yfinance
 import concurrent.futures
 from numpy import float64
 
+import sys
+sys.path.append('../AlgoTrader')
 from api import getBuyingPower, getEquity, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
 from sheets import log, logTransaction
 from predicting import predictPrices
