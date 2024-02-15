@@ -5,21 +5,22 @@ import time
 from pandas import DataFrame
 import pandas
 import yfinance
-import concurrent.futures
 from numpy import float64
 
 import sys
 sys.path.append('../AlgoTrader')
-from api import getBuyingPower, getEquity, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
+from api import getEquity, getOpenOrders, getPosition, placeBuyOrder, placeSellOrder, tradingClient
 from sheets import log, logTransaction
-from predicting import predictPrices
+from predicting import getChange, getChangeTuple, predictPrices
 from training import train
 from stocklist import stocklist
 
 symbols = stocklist
 days = 365 * 10 # 10 years works well
+timesteps = 40
 
 est = datetime.timezone(datetime.timedelta(hours=-5))
+
 
 def startLoop() ->  None:
     log("Starting trading loop...")
@@ -151,47 +152,19 @@ def dailyTrade() -> None:
 
 def getExpectedChange(symbol: str) -> float:
     log("Getting expected change for " + symbol + "...")
-    
-    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
-        print("Starting getPredictedPrices function on other process...")
-        process = executor.submit(getPredictedPrices, symbol)
-        print("Waiting for getPredictedPrices function to finish...")
 
-        exception = process.exception()
-        if exception != None: 
-            raise exception
-        predictions = process.result()
+    diff = getPredictedChange(symbol)
 
-        del process
-        gc.collect()
-
-    if predictions == None:
-        log("Predictions is None!")
+    if diff == None:
+        log("Difference is None!")
         return 0
+    
+    log("Difference: " + str(diff))
 
-    # Get today's price
-    todayPrice = predictions[0]
+    return diff
 
-    # Get predicted prices
-    # If actual performance is lower than in backtesting, try using the last 20% of data instead of the last 40 days
-    predictedPriceToday = predictions[1]
-    predictedPriceTmr = predictions[2]
-
-    log("Today's price: " + str(todayPrice))
-    log("Predicted price for today: " + str(predictedPriceToday))
-    log("Predicted price for tomorrow: " + str(predictedPriceTmr))
-
-    # Calculate difference
-    difference = predictedPriceTmr - predictedPriceToday
-    log("Difference: " + str(difference))
-
-    return difference / predictedPriceToday
-
-def getPredictedPrices(*args: any) -> tuple | None:
-    print("getPredictedPrices function running on other process...")
+def getPredictedChange(symbol: str) -> float | None:
     try:
-        symbol = args[0]
-
         log("Getting predicted prices for " + symbol + "...")
 
         # Get data, repeat until data is defined
@@ -207,7 +180,7 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         # Train model
         log("Training model for " + symbol + "...")
-        model = train(data, 30, symbol)
+        model = train(data, timesteps, symbol)
 
         if(model == None):
             log("Model is None!")
@@ -217,21 +190,14 @@ def getPredictedPrices(*args: any) -> tuple | None:
 
         log("Done!")
 
-        # Get today's price
-        todayPrice = data.iloc[-1]['Close']
-
         # Get predicted prices
-        predictedPrices = predictPrices(model, data[int(len(data)*0.8):], 30)
-        predictedPriceToday = predictedPrices[-2] # It's possible this is actually yesterday's price
-        predictedPriceTmr = predictedPrices[-1] # Might be today's price
-        # predictedPriceToday = predictToday(model, data, 30)
-        # predictedPriceTmr = predictTomorrow(model, data, 30)
+        diff = getChange(model, data[int(len(data) * 0.8):], timesteps)
 
         # Delete unneeded variables to free up ram
         del model, data
         gc.collect()
 
-        return (todayPrice, predictedPriceToday, predictedPriceTmr)
+        return diff
     except KeyboardInterrupt:
         log("Keyboard Interrupt!")
         exit()

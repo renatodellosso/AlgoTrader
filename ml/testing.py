@@ -5,7 +5,7 @@ from keras import Sequential
 from sklearn.preprocessing import MinMaxScaler
 import yfinance
 from graphing import graphMultiStockTest
-from predicting import predictPrices
+from predicting import getChange, predictPrices
 from trading import generateBuyAndSellLists
 from training import train
 from stocklist import stocklist
@@ -125,7 +125,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     start_date = today - pandas.Timedelta(days=days)
 
     # Get predicted and real prices for each stock
-    predictedPrices = {}
+    predictedChanges = {}
     realPrices = {}
     for symbol in symbols:
         print("Getting predicted prices for " + symbol + "...")
@@ -141,13 +141,15 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         model = train(trainingData, timesteps, symbol)
 
         # Get predictions from model
-        predictedPrices[symbol] = []
+        predictedChanges[symbol] = []
+        for i in range(timesteps, len(testingData) - 1):
+            if i % 100 == 0:
+                print("Predicting " + symbol + " day " + str(i - timesteps) + \
+                    "/" + str(len(testingData) - timesteps) + "...")
+            predictedChanges[symbol].append(getChange(model, testingData[:i], timesteps))
 
-        # for i in range(timesteps+1, len(testingData)):
-        #     predictedPrices[symbol].append(predictToday(model, testingData[:i], timesteps))
-
-        predictedPrices[symbol] = \
-            predictPrices(model, testingData, timesteps)
+        # predictedPrices[symbol] = \
+        #     predictPrices(model, testingData, timesteps)
 
         realPrices[symbol] = data["Close"].values[int(len(data) * trainingRatio) - timesteps:]
 
@@ -171,20 +173,20 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     print("Testing model...")
     buyPrices = {}
     profitBySymbol = {}
-    for i in range(timesteps, len(predictedPrices[symbols[0]]) - 1):
+    for i in range(timesteps, len(predictedChanges[symbols[0]]) - 1):
         dayNum = i - timesteps
         if dayNum % 100 == 0:
-            print("Day " + str(i-timesteps) + "/" + str(len(predictedPrices[symbols[0]])-timesteps) + "...")
+            print("Day " + str(i-timesteps) + "/" + str(len(predictedChanges[symbols[0]])-timesteps) + "...")
 
-        if len(predictedPrices[symbols[0]]) <= i + 1 or len(realPrices[symbols[0]]) <= i + 1:
+        if len(predictedChanges[symbols[0]]) <= i + 1 or len(realPrices[symbols[0]]) <= i + 1:
             continue
 
         changes = {}
         for symbol in symbols:
-            if len(predictedPrices[symbol]) <= i + 1 or len(realPrices[symbol]) <= i + 1:
+            if len(predictedChanges[symbol]) <= i + 1 or len(realPrices[symbol]) <= i + 1:
                 continue
 
-            diff = (predictedPrices[symbol][i + 1][0] - predictedPrices[symbol][i][0]) / predictedPrices[symbol][i][0]
+            diff = predictedChanges[symbol][i]
             changes[symbol] = diff
             
         (buyList, sellList) = generateBuyAndSellLists(changes)
@@ -308,7 +310,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     profit = money - 100
     profitPercent = profit / 100
 
-    days = len(predictedPrices[symbols[0]])
+    days = len(predictedChanges[symbols[0]])
     years = days / 365
     annualizedReturn = (1 + profitPercent) ** (1 / years) - 1
 
