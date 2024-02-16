@@ -4,11 +4,6 @@ from keras import Sequential
 from keras.callbacks import Callback
 from sklearn.preprocessing import MinMaxScaler
 
-class PredictionCallback(Callback):
-    # Should disable the default logging
-    def on_predict_end(self, logs=None):
-        pass
-
 def predictPrices(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> numpy.ndarray:
     datasetTotal = data["Close"]
     inputs = datasetTotal.values
@@ -27,8 +22,8 @@ def predictPrices(model: Sequential, data: pandas.DataFrame, timesteps: int = 40
     # xTest is a 3D array
 
     # Predict
-    print("Predicting...")  
-    predictedPrice = model.predict(xTest, callbacks=[PredictionCallback()])
+    # print("Predicting...")
+    predictedPrice = model.predict(xTest, verbose=0)
     predictedPrice = scaler.inverse_transform(predictedPrice)
 
     return predictedPrice
@@ -38,8 +33,8 @@ def getChangeTuple(model: Sequential, data: pandas.DataFrame, timesteps: int = 4
     data = data[-(2 * 365):] # Only predict the last 2 years
 
     predictions = predictPrices(model, data, timesteps)
-    predictedPriceToday = predictions[-2] # It's possible this is actually yesterday's price
-    predictedPriceTmr = predictions[-1] # Might be today's price
+    predictedPriceToday = predictions[-2][0] # It's possible this is actually yesterday's price
+    predictedPriceTmr = predictions[-1][0] # Might be today's price
 
     return (predictedPriceToday, predictedPriceTmr)
 

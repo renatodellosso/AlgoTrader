@@ -176,7 +176,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     for i in range(timesteps, len(predictedChanges[symbols[0]]) - 1):
         dayNum = i - timesteps
         if dayNum % 100 == 0:
-            print("Day " + str(i-timesteps) + "/" + str(len(predictedChanges[symbols[0]])-timesteps) + "...")
+            print(symbol, "Day " + str(i-timesteps) + "/" + str(len(predictedChanges[symbols[0]])-timesteps) + "...")
 
         if len(predictedChanges[symbols[0]]) <= i + 1 or len(realPrices[symbols[0]]) <= i + 1:
             continue
@@ -255,9 +255,9 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             if symbol not in buyPrices or shares[symbol] == 0:
                 buyPrices[symbol] = realPrice
             else:
-                buyPrices[symbol] = round((round(realPrice, 3) * round(shareCount, 3) \
-                    + round(buyPrices[symbol], 3) * round(shares[symbol], 3)) \
-                    / (round(shareCount, 3) + round(shares[symbol], 3)), 3)
+                buyPrices[symbol] = (realPrice * shareCount \
+                    + (buyPrices[symbol] * shares[symbol])) \
+                    / (shareCount + shares[symbol])
 
             buyList[symbol] = round(buyList[symbol], 3)
 
@@ -331,4 +331,5 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     graphMultiStockTest(netWorth)
 
 if __name__ == "__main__":
-    testMultiStock(stocklist, days=365*20, trainingRatio=0.4)
+    # testMultiStock(["BAC", "INTC"], days=365*20, trainingRatio=0.4)
+    testMultiStock(["BAC"], days=365*4, trainingRatio=0.6)
