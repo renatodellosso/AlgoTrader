@@ -142,11 +142,18 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
         # Get predictions from model
         predictedChanges[symbol] = []
+        startTime = pandas.Timestamp.now()
         for i in range(timesteps, len(testingData) - 1):
             if i % 100 == 0:
                 print("Predicting " + symbol + " day " + str(i - timesteps) + \
                     "/" + str(len(testingData) - timesteps) + "...")
             predictedChanges[symbol].append(getChange(model, testingData[:i], timesteps))
+
+        # Log time stats
+        timeTaken = pandas.Timestamp.now() - startTime
+        print("Time to predict ", symbol + ": ", timeTaken)
+        timePerPrediction = timeTaken.total_seconds() / (len(testingData) - timesteps)
+        print("Time per prediction:", timePerPrediction, "seconds")
 
         # predictedPrices[symbol] = \
         #     predictPrices(model, testingData, timesteps)
@@ -173,6 +180,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     print("Testing model...")
     buyPrices = {}
     profitBySymbol = {}
+
     for i in range(timesteps, len(predictedChanges[symbols[0]]) - 1):
         dayNum = i - timesteps
         if dayNum % 100 == 0:
@@ -331,5 +339,5 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     graphMultiStockTest(netWorth)
 
 if __name__ == "__main__":
-    # testMultiStock(["BAC", "INTC"], days=365*20, trainingRatio=0.4)
-    testMultiStock(["BAC"], days=365*4, trainingRatio=0.6)
+    testMultiStock(["BAC", "INTC"], days=365*20, trainingRatio=0.4)
+    # testMultiStock(["BAC"], days=365*4, trainingRatio=0.6)
