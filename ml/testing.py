@@ -82,14 +82,14 @@ def sellShares(sellList: dict[str, float], realPrices: dict[str, list[float]], i
         profitBySymbol[symbol] += tradeProfit
 
         # Update money and shares
-        money = round(money, 3)
-        money += round(tradeValue, 3)
-        shares[symbol] -= round(shareCount, 3)
+        money += tradeValue
+        shares[symbol] -= shareCount
 
 def buyShares(buyList: dict[str, float], realPrices: dict[str, list[float]], i: int) -> None:
     global money, shares, buyPrices
 
-    buyingPower = round(money, 3)
+    purchaseValue = 0
+    buyingPower = money
     for symbol, shareCount in buyList.items():
         if shareCount == 0:
             continue
@@ -97,7 +97,7 @@ def buyShares(buyList: dict[str, float], realPrices: dict[str, list[float]], i: 
         if symbol not in shares:
             shares[symbol] = 0
 
-        realPrice = realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1]
+        realPrice = realPrices[symbol][i]
 
         # Generate buy price by weighted average
         if shareCount + shares[symbol] == 0:
@@ -110,23 +110,31 @@ def buyShares(buyList: dict[str, float], realPrices: dict[str, list[float]], i: 
                 + (buyPrices[symbol] * shares[symbol])) \
                 / (shareCount + shares[symbol])
 
-        buyList[symbol] = round(buyList[symbol], 3)
+        sharesBought = buyList[symbol]
+        shares[symbol] += sharesBought
+        money -= sharesBought * realPrice
+        purchaseValue += sharesBought * realPrice
+        # if money < 0:
+        #     print("Money is negative:", money)
+        #     print("Bought", buyList[symbol] * buyingPower, "USD of", symbol, "at", realPrice, "USD/share")
 
-        shares[symbol] = round(shares[symbol], 3)
-        shares[symbol] += round(round(buyList[symbol], 3) * round(buyingPower, 3) \
-            / round(realPrice, 3), 3)
-        money = round(money, 3)
-        money -= round(round(buyList[symbol], 3) * round(buyingPower, 3), 3)
+    if purchaseValue - buyingPower > 1:
+        print("Error: purchaseValue > buyingPower")
+        print("\tpurchaseValue:", purchaseValue)
+        print("\tbuyingPower:", buyingPower)
+        print("\tbuyList:", buyList)
+        
+        # Adjust buylist by real price
+        for symbol in buyList:
+            buyList[symbol] *= realPrices[symbol][i]
+        print("\tbuyList adjusted:", buyList)
 
 def getTotalEquity(symbols: list[str], realPrices: dict[str, list[float]], i: int) -> float:
     global money, shares
 
     totalEquity = money
     for symbol in symbols:
-        if len(realPrices[symbol]) <= i and symbol in shares:
-            totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][-1], 3)
-        else:
-            totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][i], 3)
+        totalEquity += shares[symbol] * realPrices[symbol][i]
     return totalEquity
 
 def testDay(symbols: list[str], predictedChanges: dict[str, list[float]], realPrices: dict[str, list[float]], \
@@ -147,10 +155,10 @@ def testDay(symbols: list[str], predictedChanges: dict[str, list[float]], realPr
         diff = predictedChanges[symbol][i]
         changes[symbol] = diff
         
-    (buyList, sellList) = generateBuyAndSellLists(changes)
+    (buyList, sellList) = generateBuyAndSellLists(changes, True)
 
     # Convert sellList to a dict, where key is symbol and value is number of shares to sell
-    sellList = {symbol: shares[symbol] if symbol in shares else 0 for symbol in sellList}
+    sellList = {symbol: shares[symbol] if shares[symbol] > 0 else 0 for symbol in sellList}
 
     # Caculate total equity
     totalEquity = getTotalEquity(symbols, realPrices, i)
@@ -159,12 +167,11 @@ def testDay(symbols: list[str], predictedChanges: dict[str, list[float]], realPr
     for symbol in buyList:
         buyList[symbol] *= totalEquity # Convert from % of total equity to USD
         # Convert from USD to shares
-        buyList[symbol] /= realPrices[symbol][i] \
-            if len(realPrices[symbol]) > i \
-            else realPrices[symbol][-1]
+        buyList[symbol] /= realPrices[symbol][i]
 
         # Determine adjustment
-        if shares[symbol] < buyList[symbol]:
+        # print(symbol, "buyList:", buyList[symbol], "shares:", shares[symbol])
+        if shares[symbol] <= buyList[symbol]:
             buyList[symbol] -= shares[symbol]
         else:
             sellList[symbol] = shares[symbol] - buyList[symbol]
@@ -173,14 +180,22 @@ def testDay(symbols: list[str], predictedChanges: dict[str, list[float]], realPr
     # Sell everything in sellList
     sellShares(sellList, realPrices, i)
 
-    # Total value of buy orders
-    buyValue = 0
+    # Calculate money required for buyList
+    moneyRequired = 0
     for symbol in buyList:
-        buyValue += buyList[symbol] * realPrices[symbol][i] \
-            if len(realPrices[symbol]) > i \
-            else realPrices[symbol][-1]
-    if buyValue > money:
-        print("Error: buyValue > money. buyValue:", buyValue, "money:", money)
+        moneyRequired += buyList[symbol] * realPrices[symbol][i]
+    if moneyRequired - money > 1:
+        print("Error: moneyRequired > money")
+        print("\tmoneyRequired:", moneyRequired)
+        print("\tmoney:", money)
+        print("\tsellList:", sellList)
+        print("\tbuyList:", buyList)
+
+        print("\ttotalEquity:", totalEquity)
+        shareValues = {}
+        for symbol in symbols:
+            shareValues[symbol] = shares[symbol] * realPrices[symbol][i]
+        print("\tshareValues:", shareValues)
 
     # Buy shares
     buyShares(buyList, realPrices, i)
@@ -188,26 +203,17 @@ def testDay(symbols: list[str], predictedChanges: dict[str, list[float]], realPr
     # Calculate net worth
     netWorthToday = money
     for symbol in symbols:
-        netWorthToday += round(shares[symbol], 3) \
-            * round(realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1], 3)
-    
+        netWorthToday += shares[symbol] \
+            * realPrices[symbol][i]
     netWorth.append(netWorthToday)
-
-    # Round shares to 4 decimal places
-    for symbol in shares:
-        shares[symbol] = round(shares[symbol], 3)
-    
-    # Round buy prices to 4 decimal places
-    for symbol in buyPrices:
-        buyPrices[symbol] = round(buyPrices[symbol], 3)
-    
-    # Round money to 4 decimal places
-    money = round(money, 3)
 
     # Log value of each holding
     for symbol in symbols:
         holdings[symbol].append(shares[symbol] * realPrices[symbol][i])
     holdings["Money"].append(money)
+
+    if money < -0.1:
+        input("Money is negative: " + str(money) + ". Press Enter to continue...")
 
 def testModel(symbols: list[str], predictedChanges: dict[list[float]], realPrices: dict[list[float]], timesteps: int = 40) \
     -> TestResults:
@@ -266,6 +272,7 @@ def graphMultiStockTest(results: TestResults) -> None:
     # Net worth
     plt.plot(results.netWorth, color='blue', label='Net Worth')
     plt.plot([100] * len(results.netWorth), color='black', label='Starting Net Worth')
+    plt.plot([0] * len(results.netWorth), color='red')
 
     # Holdings
     for symbol, holding in results.holdings.items():
