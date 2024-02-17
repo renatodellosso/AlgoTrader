@@ -54,6 +54,7 @@ def graphTest(predictedPrice: numpy.ndarray, realPrice: numpy.ndarray, netWorth:
     plt.legend()
     plt.show()
 
+# Outdated, use the one in testing.py instead
 def graphMultiStockTest(networth: list) -> None:
     # Plot results
     print("Plotting results...")

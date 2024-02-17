@@ -1,125 +1,15 @@
 import gc
-import numpy
+from matplotlib import pyplot as plt
 import pandas
-from keras import Sequential
-from sklearn.preprocessing import MinMaxScaler
 import yfinance
-from graphing import graphMultiStockTest
-from predicting import getChange, predictPrices
+from predicting import getChange
 from trading import generateBuyAndSellLists
 from training import train
-from stocklist import stocklist
 
-def test(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> None:
-    print("Preparing to test model... Data Length: " + str(len(data)))
-    realPrice = data.iloc[:, 1:2].values
-    datasetTotal = data["Close"]
-    inputs = datasetTotal.values
-
-    inputs = inputs.reshape(-1, 1) # param1 is number of rows, param2 is size of each row
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    inputs = scaler.fit_transform(inputs)
-
-    xTest = [[0] * timesteps] * timesteps
-    for i in range(timesteps, len(inputs)):
-        xTest.append(inputs[i - timesteps:i, 0])
-
-    xTest = numpy.array(xTest)
-    xTest = numpy.reshape(xTest, (xTest.shape[0], xTest.shape[1], 1))
-
-    # xTest is a 3D array
-
-    # Predict
-    print("Predicting...")  
-    predictedPrice = model.predict(xTest)
-    predictedPrice = scaler.inverse_transform(predictedPrice)
-
-    algoTrade(predictedPrice, realPrice, timesteps)
-
-def algoTrade(predictedPrices: numpy.ndarray, realPrices: numpy.ndarray, timesteps: int) -> None:
-    # Convert predictedPrices and realPrices to 1D arrays
-    predictedPrices = predictedPrices.flatten()
-    realPrices = realPrices.flatten()
-
-    money = realPrices[timesteps - 1]
-    print("Starting Money: " + str(money))
-    shares = 0
-
-    actionsX = []
-    actionsY = []
-    actionsC = []
-    netWorth = []
-    for i in range(timesteps, len(predictedPrices) - 1):
-        netWorth.append(money + shares * realPrices[i])
-        if money > 0 and predictedPrices[i] < predictedPrices[i + 1]:
-            # Buy
-            shares = money / realPrices[i]
-            money = 0
-            actionsX.append(i - timesteps)
-            actionsY.append(realPrices[i])
-            actionsC.append('green')
-            i += 2 # Trades take 2 days to complete
-        elif shares > 0 and predictedPrices[i] > predictedPrices[i + 1]:
-            # Sell
-            money = shares * realPrices[i]
-            shares = 0
-            actionsX.append(i - timesteps)
-            actionsY.append(realPrices[i])
-            actionsC.append('red')
-            i += 2 # Trades take 2 days to complete
-
-    money += shares * realPrices[-1]
-    netWorth.append(money)
-    shares = 0
-
-    # Calculate % profit for both our trades and just holding
-    profit = (money - realPrices[timesteps - 1]) / realPrices[timesteps - 1]
-    holdProfit = (realPrices[-1] - realPrices[timesteps - 1]) / realPrices[timesteps - 1]
-
-    # Calculate annualized return
-    days = len(realPrices) - timesteps
-    years = days / 365
-    annualizedReturn = (1 + profit) ** (1 / years) - 1
-
-    print("Days Elapsed: ", days)
-    print("Years Elapsed: ", years)
-    print("Shares: ", shares)
-    print("Money: ", money)
-    print("Final Share Price: ", realPrices[-1])
-    print("Profit:", round(profit * 100, 2), "%")
-    print("Holding Profit:", round(holdProfit * 100, 2), "%")
-    print("Annualized Return:", round(annualizedReturn * 100, 2), "%")
-
-    # Remove the part before we begin trading
-    # predictedPrices = predictedPrices[timesteps:]
-    # realPrices = realPrices[timesteps:]
-
-    # # graphTest(predictedPrices, realPrices, netWorth)
-
-def testSingleStock(symbol: str, timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0) -> None:
-    # Get historical data
-    today = pandas.Timestamp.today()
-    today = today - pandas.Timedelta(days=offsetDays)
-    start_date = today - pandas.Timedelta(days=days)
-
-    print("Downloading data from " + start_date.strftime("%Y-%m-%d") + " to " + today.strftime("%Y-%m-%d") + "...")
-    data = pandas.DataFrame(yfinance.download(symbol, start=start_date, end=today))
-    print("Done!")
-
-    print("Data length: " + str(len(data)))
-
-    # Check TensorFlow configuration
-    # print("TensorFlow configuration:")
-    # print("CPUs:", tensorflow.config.list_physical_devices('CPU'))
-    # print("GPUs:", tensorflow.config.list_physical_devices('GPU'))
-
-    # Be really careful with : placement here!
-    model = train(data[:int(len(data) * trainingRatio)], timesteps)
-
-    # Test model
-    test(model, data[int(len(data) * trainingRatio):], timesteps)
-
-def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0) -> None:
+# Returns (predictedChanges, realPrices)
+def getPredictedChangesAndRealPrices( \
+    symbols: list[str], timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0) \
+    -> tuple[dict[str, list[float]], dict[str, list[float]]]:
     today = pandas.Timestamp.today()
     today = today - pandas.Timedelta(days=offsetDays)
     start_date = today - pandas.Timedelta(days=days)
@@ -151,7 +41,7 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
         # Log time stats
         timeTaken = pandas.Timestamp.now() - startTime
-        print("Time to predict ", symbol + ": ", timeTaken)
+        print("Time to predict", symbol + ": ", timeTaken)
         timePerPrediction = timeTaken.total_seconds() / (len(testingData) - timesteps)
         print("Time per prediction:", timePerPrediction, "seconds")
 
@@ -160,14 +50,173 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
         realPrices[symbol] = data["Close"].values[int(len(data) * trainingRatio) - timesteps:]
 
-        print("Real prices: ", len(realPrices[symbol]))
-        print("First Date:", data.index[0])
-
         del data, model
         gc.collect()
 
+    return (predictedChanges, realPrices)
+
+class TestResults:
+    def __init__(self, money: float, shares: dict[str, float], netWorth: list[float], profitBySymbol: dict[str, float], \
+                holdings: dict[str, list[float]]):
+        self.money = money
+        self.shares = shares
+        self.netWorth = netWorth
+        self.profitBySymbol = profitBySymbol
+        self.holdings = holdings
+
+def sellShares(sellList: dict[str, float], realPrices: dict[str, list[float]], i: int) -> None:
+    global money, shares, buyPrices, profitBySymbol
+
+    for symbol, shareCount in sellList.items():
+        if shareCount <= 0:
+            continue
+
+        # Sell shares
+        priceDiff = realPrices[symbol][i] - buyPrices[symbol]
+        tradeProfit = shareCount * priceDiff
+        tradeValue = shareCount * realPrices[symbol][i]
+        
+        # Update profit by symbol
+        if symbol not in profitBySymbol:
+            profitBySymbol[symbol] = 0
+        profitBySymbol[symbol] += tradeProfit
+
+        # Update money and shares
+        money = round(money, 3)
+        money += round(tradeValue, 3)
+        shares[symbol] -= round(shareCount, 3)
+
+def buyShares(buyList: dict[str, float], realPrices: dict[str, list[float]], i: int) -> None:
+    global money, shares, buyPrices
+
+    buyingPower = round(money, 3)
+    for symbol, shareCount in buyList.items():
+        if shareCount == 0:
+            continue
+
+        if symbol not in shares:
+            shares[symbol] = 0
+
+        realPrice = realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1]
+
+        # Generate buy price by weighted average
+        if shareCount + shares[symbol] == 0:
+            print("Error: shareCount + shares[symbol] == 0")
+
+        if symbol not in buyPrices or shares[symbol] == 0 or shareCount + shares[symbol] == 0:
+            buyPrices[symbol] = realPrice
+        else:
+            buyPrices[symbol] = (realPrice * shareCount \
+                + (buyPrices[symbol] * shares[symbol])) \
+                / (shareCount + shares[symbol])
+
+        buyList[symbol] = round(buyList[symbol], 3)
+
+        shares[symbol] = round(shares[symbol], 3)
+        shares[symbol] += round(round(buyList[symbol], 3) * round(buyingPower, 3) \
+            / round(realPrice, 3), 3)
+        money = round(money, 3)
+        money -= round(round(buyList[symbol], 3) * round(buyingPower, 3), 3)
+
+def getTotalEquity(symbols: list[str], realPrices: dict[str, list[float]], i: int) -> float:
+    global money, shares
+
+    totalEquity = money
+    for symbol in symbols:
+        if len(realPrices[symbol]) <= i and symbol in shares:
+            totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][-1], 3)
+        else:
+            totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][i], 3)
+    return totalEquity
+
+def testDay(symbols: list[str], predictedChanges: dict[str, list[float]], realPrices: dict[str, list[float]], \
+    dayNum: int, i: int, timesteps: int = 40) -> None:
+    global money, shares, netWorth, buyPrices, profitBySymbol, holdings
+
+    if dayNum % 100 == 0:
+        print("Day " + str(i-timesteps) + "/" + str(len(predictedChanges[symbols[0]])) + "...")
+
+    if len(predictedChanges[symbols[0]]) <= i + 1 or len(realPrices[symbols[0]]) <= i + 1:
+        return
+
+    changes = {}
+    for symbol in symbols:
+        if len(predictedChanges[symbol]) <= i + 1 or len(realPrices[symbol]) <= i + 1:
+            continue
+
+        diff = predictedChanges[symbol][i]
+        changes[symbol] = diff
+        
+    (buyList, sellList) = generateBuyAndSellLists(changes)
+
+    # Convert sellList to a dict, where key is symbol and value is number of shares to sell
+    sellList = {symbol: shares[symbol] if symbol in shares else 0 for symbol in sellList}
+
+    # Caculate total equity
+    totalEquity = getTotalEquity(symbols, realPrices, i)
+
+    # Calculate adjustment to each stock based on total equity
+    for symbol in buyList:
+        buyList[symbol] *= totalEquity # Convert from % of total equity to USD
+        # Convert from USD to shares
+        buyList[symbol] /= realPrices[symbol][i] \
+            if len(realPrices[symbol]) > i \
+            else realPrices[symbol][-1]
+
+        # Determine adjustment
+        if shares[symbol] < buyList[symbol]:
+            buyList[symbol] -= shares[symbol]
+        else:
+            sellList[symbol] = shares[symbol] - buyList[symbol]
+            buyList[symbol] = 0
+
+    # Sell everything in sellList
+    sellShares(sellList, realPrices, i)
+
+    # Total value of buy orders
+    buyValue = 0
+    for symbol in buyList:
+        buyValue += buyList[symbol] * realPrices[symbol][i] \
+            if len(realPrices[symbol]) > i \
+            else realPrices[symbol][-1]
+    if buyValue > money:
+        print("Error: buyValue > money. buyValue:", buyValue, "money:", money)
+
+    # Buy shares
+    buyShares(buyList, realPrices, i)
+
+    # Calculate net worth
+    netWorthToday = money
+    for symbol in symbols:
+        netWorthToday += round(shares[symbol], 3) \
+            * round(realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1], 3)
+    
+    netWorth.append(netWorthToday)
+
+    # Round shares to 4 decimal places
+    for symbol in shares:
+        shares[symbol] = round(shares[symbol], 3)
+    
+    # Round buy prices to 4 decimal places
+    for symbol in buyPrices:
+        buyPrices[symbol] = round(buyPrices[symbol], 3)
+    
+    # Round money to 4 decimal places
+    money = round(money, 3)
+
+    # Log value of each holding
+    for symbol in symbols:
+        holdings[symbol].append(shares[symbol] * realPrices[symbol][i])
+    holdings["Money"].append(money)
+
+def testModel(symbols: list[str], predictedChanges: dict[list[float]], realPrices: dict[list[float]], timesteps: int = 40) \
+    -> TestResults:
     # Initialize variables for testing
     print("Preparing variables for testing...")
+
+    # Declare global variables
+    global money, shares, netWorth, buyPrices, profitBySymbol, holdings
+
     money = 100.0
     shares = {}
 
@@ -180,126 +229,20 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     print("Testing model...")
     buyPrices = {}
     profitBySymbol = {}
+    holdings = {symbol: [] for symbol in symbols}
+    holdings["Money"] = []
 
-    for i in range(timesteps, len(predictedChanges[symbols[0]]) - 1):
+    startTime = pandas.Timestamp.now()
+    for i in range(0, len(predictedChanges[symbols[0]]) - 1):
         dayNum = i - timesteps
-        if dayNum % 100 == 0:
-            print(symbol, "Day " + str(i-timesteps) + "/" + str(len(predictedChanges[symbols[0]])-timesteps) + "...")
+        testDay(symbols, predictedChanges, realPrices, dayNum, i, timesteps)
 
-        if len(predictedChanges[symbols[0]]) <= i + 1 or len(realPrices[symbols[0]]) <= i + 1:
-            continue
-
-        changes = {}
-        for symbol in symbols:
-            if len(predictedChanges[symbol]) <= i + 1 or len(realPrices[symbol]) <= i + 1:
-                continue
-
-            diff = predictedChanges[symbol][i]
-            changes[symbol] = diff
-            
-        (buyList, sellList) = generateBuyAndSellLists(changes)
-
-        # Convert sellList to a dict, where key is symbol and value is number of shares to sell
-        sellList = {symbol: shares[symbol] if symbol in shares else 0 for symbol in sellList}
-
-        # Caculate total equity
-        totalEquity = money
-        for symbol in symbols:
-            if len(realPrices[symbol]) <= i and symbol in shares:
-                totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][-1], 3)
-            else:
-                totalEquity += round(shares[symbol], 3) * round(realPrices[symbol][i], 3)
-
-        # Calculate adjustment to each stock based on total equity
-        for symbol in buyList:
-            buyList[symbol] *= totalEquity
-            buyList[symbol] /= realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1]
-
-            # Determine adjustment
-            if shares[symbol] < buyList[symbol]:
-                buyList[symbol] -= shares[symbol]
-            else:
-                sellList[symbol] = shares[symbol] - buyList[symbol]
-                buyList[symbol] = 0
-
-        # Sell everything in sellList
-        for symbol, shareCount in sellList.items():
-            if shareCount <= 0:
-                continue
-
-            # Sell shares
-            priceDiff = realPrices[symbol][i] - buyPrices[symbol]
-            tradeProfit = shareCount * priceDiff
-            tradeValue = shareCount * realPrices[symbol][i]
-
-            # Log details
-            # print("Selling", shareCount, "shares of", symbol, "Profit:", tradeProfit, "USD")
-
-            # Update profit by symbol
-            if symbol not in profitBySymbol:
-                profitBySymbol[symbol] = 0
-            profitBySymbol[symbol] += tradeProfit
-
-            # Update money and shares
-            money = round(money, 3)
-            money += round(tradeValue, 3)
-            shares[symbol] -= round(shareCount, 3)
-
-        # Buy shares
-        buyingPower = round(money, 3)
-        for symbol, shareCount in buyList.items():
-            if shareCount == 0:
-                continue
-
-            if symbol not in shares:
-                shares[symbol] = 0
-
-            realPrice = realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1]
-            
-            # Generate buy price by weighted average
-            if shareCount + shares[symbol] == 0:
-                print("Error: shareCount + shares[symbol] == 0")
-
-            if symbol not in buyPrices or shares[symbol] == 0:
-                buyPrices[symbol] = realPrice
-            else:
-                buyPrices[symbol] = (realPrice * shareCount \
-                    + (buyPrices[symbol] * shares[symbol])) \
-                    / (shareCount + shares[symbol])
-
-            buyList[symbol] = round(buyList[symbol], 3)
-
-            shares[symbol] = round(shares[symbol], 3)
-            shares[symbol] += round(round(buyList[symbol], 3) * round(buyingPower, 3) \
-                / round(realPrice, 3), 3)
-            money = round(money, 3)
-            money -= round(round(buyList[symbol], 3) * round(buyingPower, 3), 3)
-
-        # Calculate net worth
-        netWorthToday = money
-        for symbol in symbols:
-            netWorthToday += round(shares[symbol], 3) \
-                * round(realPrices[symbol][i] if len(realPrices[symbol]) > i else realPrices[symbol][-1], 3)
-        
-        netWorth.append(netWorthToday)
-
-        # Round shares to 4 decimal places
-        for symbol in shares:
-            shares[symbol] = round(shares[symbol], 3)
-        
-        # Round buy prices to 4 decimal places
-        for symbol in buyPrices:
-            buyPrices[symbol] = round(buyPrices[symbol], 3)
-        
-        # Round money to 4 decimal places
-        money = round(money, 3)
-
-        # Print progress
-        # print("Day " + str(i) + ":", netWorthToday, "Money:", money)
-        # for symbol in symbols:
-        #     if len(realPrices[symbol]) <= i:
-        #         print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][-1] * shares[symbol], " USD")
-        #     print("\t" + symbol + ":", shares[symbol], "Shares -", realPrices[symbol][i] * shares[symbol], " USD")
+    # Log time stats
+    endTime = pandas.Timestamp.now()
+    timeTaken = endTime - startTime
+    print("Time to test:", timeTaken)
+    timePerDay = timeTaken.total_seconds() / (len(predictedChanges[symbols[0]]) - timesteps)
+    print("Time per day:", timePerDay, "seconds")
 
     # Sell all shares
     for symbol in symbols:
@@ -314,8 +257,37 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
         money += shares[symbol] * realPrices[symbol][-1]
         shares[symbol] = 0
 
+    return TestResults(money, shares, netWorth, profitBySymbol, holdings)
+
+def graphMultiStockTest(results: TestResults) -> None:
+    # Plot results
+    print("Plotting results...")
+
+    # Net worth
+    plt.plot(results.netWorth, color='blue', label='Net Worth')
+    plt.plot([100] * len(results.netWorth), color='black', label='Starting Net Worth')
+
+    # Holdings
+    for symbol, holding in results.holdings.items():
+        plt.plot(holding, label=symbol + " Holding Value")
+
+    plt.title('Algo Trade Test Results')
+    plt.xlabel('Time')
+    plt.ylabel('Net Worth')
+    plt.legend()
+    plt.show()
+
+def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0) -> None:
+    overallStartTime = pandas.Timestamp.now()
+    
+    # Get predicted and real prices for each stock
+    (predictedChanges, realPrices) = getPredictedChangesAndRealPrices(symbols, timesteps, days, trainingRatio, offsetDays)
+    
+    # Test model
+    testResults = testModel(symbols, predictedChanges, realPrices, timesteps)
+
     # Calculate % profit and annualized return
-    profit = money - 100
+    profit = testResults.money - 100
     profitPercent = profit / 100
 
     days = len(predictedChanges[symbols[0]])
@@ -324,8 +296,8 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
     print("Days Elapsed:", days)
     print("Years Elapsed:", years)
-    print("Shares:", shares)
-    print("Money:", money)
+    print("Shares:", testResults.shares)
+    print("Money:", testResults.money)
     print("Profit:", round(profit, 2))
     print("Profit %:", round(profitPercent * 100, 2))
     print("Annualized Return %:", round(annualizedReturn * 100, 2))
@@ -333,11 +305,18 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     # Log profit by symbol
     print("Profit by Symbol:")
     for symbol in symbols:
-        print(symbol + " Profit:", profitBySymbol[symbol] if symbol in profitBySymbol else "0", \
-            "(% of total profit: " + str(round(profitBySymbol[symbol] / profit * 100, 2)) + "%)")
+        print(symbol + " Profit:", testResults.profitBySymbol[symbol] if symbol in testResults.profitBySymbol else "0", \
+            "(% of total profit: " + str(round(testResults.profitBySymbol[symbol] / profit * 100, 2)) + "%)")
 
-    graphMultiStockTest(netWorth)
+    # Log time stats
+    overallEndTime = pandas.Timestamp.now()
+    overallTimeTaken = overallEndTime - overallStartTime
+    print("Overall Time:", overallTimeTaken)
+    timePerDay = overallTimeTaken.total_seconds() / (len(predictedChanges[symbols[0]]) - timesteps)
+    print("Overall Time per Day:", timePerDay, "seconds")
+
+    graphMultiStockTest(testResults)
 
 if __name__ == "__main__":
-    testMultiStock(["BAC", "INTC"], days=365*20, trainingRatio=0.4)
-    # testMultiStock(["BAC"], days=365*4, trainingRatio=0.6)
+    # testMultiStock(["BAC", "INTC"], days=365*20, trainingRatio=0.4)
+    testMultiStock(["BAC", "INTC"], days=365*4, trainingRatio=0.6)
