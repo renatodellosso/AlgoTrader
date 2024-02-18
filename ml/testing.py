@@ -1,10 +1,12 @@
 import gc
 from matplotlib import pyplot as plt
+import numpy
 import pandas
 import yfinance
 from predicting import getChange
 from trading import generateBuyAndSellLists
 from training import train
+from stocklist import stocklist
 
 # Returns (predictedChanges, realPrices)
 def getPredictedChangesAndRealPrices( \
@@ -12,7 +14,7 @@ def getPredictedChangesAndRealPrices( \
     -> tuple[dict[str, list[float]], dict[str, list[float]]]:
     today = pandas.Timestamp.today()
     today = today - pandas.Timedelta(days=offsetDays)
-    start_date = today - pandas.Timedelta(days=days)
+    startDate = today - pandas.Timedelta(days=days)
 
     # Get predicted and real prices for each stock
     predictedChanges = {}
@@ -20,8 +22,8 @@ def getPredictedChangesAndRealPrices( \
     for symbol in symbols:
         print("Getting predicted prices for " + symbol + "...")
 
-        print("Downloading data from " + start_date.strftime("%Y-%m-%d") + " to " + today.strftime("%Y-%m-%d") + "...")
-        data = pandas.DataFrame(yfinance.download(symbol, start=start_date, end=today))
+        print("Downloading data from " + startDate.strftime("%Y-%m-%d") + " to " + today.strftime("%Y-%m-%d") + "...")
+        data = pandas.DataFrame(yfinance.download(symbol, start=startDate, end=today))
         print("Done!")
 
         trainingData = data[:int(len(data) * trainingRatio)]
@@ -48,7 +50,7 @@ def getPredictedChangesAndRealPrices( \
         # predictedPrices[symbol] = \
         #     predictPrices(model, testingData, timesteps)
 
-        realPrices[symbol] = data["Close"].values[int(len(data) * trainingRatio) - timesteps:]
+        realPrices[symbol] = data["Close"].values[len(trainingData):]
 
         del data, model
         gc.collect()
@@ -65,7 +67,7 @@ class TestResults:
         self.holdings = holdings
 
 def sellShares(sellList: dict[str, float], realPrices: dict[str, list[float]], i: int) -> None:
-    global money, shares, buyPrices, profitBySymbol
+    global money, shares, buyPrices, profitBySymbol, wins, losses
 
     for symbol, shareCount in sellList.items():
         if shareCount <= 0:
@@ -73,6 +75,12 @@ def sellShares(sellList: dict[str, float], realPrices: dict[str, list[float]], i
 
         # Sell shares
         priceDiff = realPrices[symbol][i] - buyPrices[symbol]
+
+        if priceDiff > 0:
+            wins += 1
+        elif priceDiff < 0:
+            losses += 1
+
         tradeProfit = shareCount * priceDiff
         tradeValue = shareCount * realPrices[symbol][i]
         
@@ -114,9 +122,6 @@ def buyShares(buyList: dict[str, float], realPrices: dict[str, list[float]], i: 
         shares[symbol] += sharesBought
         money -= sharesBought * realPrice
         purchaseValue += sharesBought * realPrice
-        # if money < 0:
-        #     print("Money is negative:", money)
-        #     print("Bought", buyList[symbol] * buyingPower, "USD of", symbol, "at", realPrice, "USD/share")
 
     if purchaseValue - buyingPower > 1:
         print("Error: purchaseValue > buyingPower")
@@ -221,15 +226,18 @@ def testModel(symbols: list[str], predictedChanges: dict[list[float]], realPrice
     print("Preparing variables for testing...")
 
     # Declare global variables
-    global money, shares, netWorth, buyPrices, profitBySymbol, holdings
+    global money, shares, netWorth, buyPrices, profitBySymbol, holdings, wins, losses
 
     money = 100.0
     shares = {}
 
+    wins = 0
+    losses = 0
+
     for symbol in symbols:
         shares[symbol] = 0
 
-    netWorth = [money]
+    netWorth = []
 
     # Test model
     print("Testing model...")
@@ -265,18 +273,34 @@ def testModel(symbols: list[str], predictedChanges: dict[list[float]], realPrice
 
     return TestResults(money, shares, netWorth, profitBySymbol, holdings)
 
-def graphMultiStockTest(results: TestResults) -> None:
+def graphMultiStockTest(results: TestResults, days: int, realPrices: dict[str, list[float]]) -> None:
     # Plot results
     print("Plotting results...")
 
-    # Net worth
-    plt.plot(results.netWorth, color='blue', label='Net Worth')
-    plt.plot([100] * len(results.netWorth), color='black', label='Starting Net Worth')
-    plt.plot([0] * len(results.netWorth), color='red')
+    # dict.values() returns a view, so we need to convert it to a list
+    # [*dict] unpacks the view
+    stackAxis = numpy.vstack([*results.holdings.values()])
+ 
+    fig, axis = plt.subplots()
 
-    # Holdings
-    for symbol, holding in results.holdings.items():
-        plt.plot(holding, label=symbol + " Holding Value")
+    axis.stackplot(range(len(results.netWorth)), stackAxis, labels=results.holdings.keys())
+    axis.plot([100] * len(results.netWorth), color='black', label='Starting Net Worth')
+    axis.plot([0] * len(results.netWorth), color='red')
+
+    # Fetch S&P 500 data and add it to the plot
+    # today = pandas.Timestamp.today()
+    # startDate = today - pandas.Timedelta(days=days)
+    # sp500 = yfinance.download( \
+    #     '^GSPC', start=startDate, end=today)
+    # print(days)
+    # print(len(sp500["Close"].values))
+    # print(len(results.netWorth))
+    # axis.plot(sp500["Close"].values / sp500["Close"].values[0] * 100, color='green', label='S&P 500')
+
+    # Plot real prices
+    for symbol, prices in realPrices.items():
+        prices = prices[:len(results.netWorth)]
+        axis.plot(prices / prices[0] * 100, label=symbol)
 
     plt.title('Algo Trade Test Results')
     plt.xlabel('Time')
@@ -284,11 +308,17 @@ def graphMultiStockTest(results: TestResults) -> None:
     plt.legend()
     plt.show()
 
-def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0) -> None:
+def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10, trainingRatio: float = 0.8, offsetDays: int = 0, \
+        trainingDays: int = 0) -> None:
     overallStartTime = pandas.Timestamp.now()
+
+    if trainingDays > 0:
+        # Convert from trainingDays to trainingRatio
+        trainingRatio = trainingDays / days
     
     # Get predicted and real prices for each stock
-    (predictedChanges, realPrices) = getPredictedChangesAndRealPrices(symbols, timesteps, days, trainingRatio, offsetDays)
+    (predictedChanges, realPrices) = \
+        getPredictedChangesAndRealPrices(symbols, timesteps, days, trainingRatio, offsetDays)
     
     # Test model
     testResults = testModel(symbols, predictedChanges, realPrices, timesteps)
@@ -309,6 +339,10 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
     print("Profit %:", round(profitPercent * 100, 2))
     print("Annualized Return %:", round(annualizedReturn * 100, 2))
 
+    # Calculate win rate
+    totalTrades = wins + losses
+    print("Win Rate:", wins, "/", totalTrades, "=", str(round(wins / totalTrades, 3) * 100) + "%")
+
     # Log profit by symbol
     print("Profit by Symbol:")
     for symbol in symbols:
@@ -316,14 +350,31 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
             "(% of total profit: " + str(round(testResults.profitBySymbol[symbol] / profit * 100, 2)) + "%)")
 
     # Log time stats
-    overallEndTime = pandas.Timestamp.now()
-    overallTimeTaken = overallEndTime - overallStartTime
+    overallTimeTaken = pandas.Timestamp.now() - overallStartTime
     print("Overall Time:", overallTimeTaken)
     timePerDay = overallTimeTaken.total_seconds() / (len(predictedChanges[symbols[0]]) - timesteps)
     print("Overall Time per Day:", timePerDay, "seconds")
 
-    graphMultiStockTest(testResults)
+    graphMultiStockTest(testResults, days, realPrices)
 
 if __name__ == "__main__":
-    # testMultiStock(["BAC", "INTC"], days=365*20, trainingRatio=0.4)
-    testMultiStock(["BAC", "INTC"], days=365*4, trainingRatio=0.6)
+    # testMultiStock(stocklist, days=365*20, trainingDays=365*8)
+    testMultiStock(["BAC", "INTC"], days=365*10, trainingDays=365*5, timesteps=20)
+
+# Testing done on 2/18/24
+
+# 5 years of training, 5 years of testing
+
+# 3 years of training, 3 years of testing 
+# Timesteps: Annualized Return
+# 20: -6.21, -17.74
+# 10: -13.68, -9.59
+# 5: -14.61, -15.46
+
+# 1 year of training, 1 year of testing
+# Timesteps: Annualized Return
+# 40: 4.88, 3.29
+# 30: 19.96, 11.74, 9.84
+# 20: 7.01, 16.42, 24.5
+# 10: 17.96, 20.78, 34.09
+# 5: 14.89, 17.67, 11.88
