@@ -3,10 +3,23 @@ from matplotlib import pyplot as plt
 import numpy
 import pandas
 import yfinance
+from multiprocessing import Array, Process, connection
+import multiprocessing
+from keras import Sequential
 from predicting import getChange
 from trading import generateBuyAndSellLists
 from training import train
-from stocklist import stocklist
+
+processCount = 3
+
+def predictChangesProcess(\
+    symbol: str, changes: list[float], offset: int, timesteps: int, testingData: pandas.DataFrame, model: Sequential) -> None:
+    print("Started process", offset, "on other process")
+    for i in range(timesteps + offset, len(testingData) - 1, processCount):
+        if i % 100 == 0:
+            print("Predicting " + symbol + " day " + str(i - timesteps) + \
+                "/" + str(len(testingData) - timesteps) + "...")
+        changes[i - timesteps] = getChange(model, testingData[:i], timesteps)
 
 # Returns (predictedChanges, realPrices)
 def getPredictedChangesAndRealPrices( \
@@ -35,16 +48,26 @@ def getPredictedChangesAndRealPrices( \
         # Get predictions from model
         predictedChanges[symbol] = []
         startTime = pandas.Timestamp.now()
-        for i in range(timesteps, len(testingData) - 1):
-            if i % 100 == 0:
-                print("Predicting " + symbol + " day " + str(i - timesteps) + \
-                    "/" + str(len(testingData) - timesteps) + "...")
-            predictedChanges[symbol].append(getChange(model, testingData[:i], timesteps))
+
+        # Start processes
+        changes = Array("d", len(testingData) - timesteps - 1)
+        processes = []
+        for i in range(processCount):
+            print("Starting process", i)
+            proc = Process(target=predictChangesProcess, args=(symbol, changes, i, timesteps, testingData, model))
+            proc.start()
+            processes.append(proc)
+            print("Started process", i)
+        
+        # Wait for processes to finish
+        connection.wait(proc.sentinel for proc in processes)
+        print("All processes finished!")
+        predictedChanges[symbol] = list(changes)
 
         # Log time stats
         timeTaken = pandas.Timestamp.now() - startTime
         print("Time to predict", symbol + ": ", timeTaken)
-        timePerPrediction = timeTaken.total_seconds() / (len(testingData) - timesteps)
+        timePerPrediction = timeTaken.total_seconds() / (len(changes))
         print("Time per prediction:", timePerPrediction, "seconds")
 
         # predictedPrices[symbol] = \
@@ -357,13 +380,18 @@ def testMultiStock(symbols: list[str], timesteps: int = 40, days: int = 365 * 10
 
     graphMultiStockTest(testResults, days, realPrices)
 
-if __name__ == "__main__":
+print("Testing from process:", multiprocessing.current_process().name)
+if __name__ == "__main__" and multiprocessing.current_process().name == "MainProcess":
+    print("Starting test...")
     # testMultiStock(stocklist, days=365*20, trainingDays=365*8)
-    testMultiStock(["BAC", "INTC"], days=365*10, trainingDays=365*5, timesteps=20)
+    # testMultiStock(["BAC", "INTC"], days=365*10, trainingDays=365*5, timesteps=10)
+    testMultiStock(["BAC", "INTC"], days=365*8, trainingDays=365*4, timesteps=10)
 
 # Testing done on 2/18/24
 
 # 5 years of training, 5 years of testing
+# 20: 2.95, -5.17
+# 10: -7.33
 
 # 3 years of training, 3 years of testing 
 # Timesteps: Annualized Return

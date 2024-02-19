@@ -1,7 +1,6 @@
 import numpy
 import pandas
 from keras import Sequential
-from keras.callbacks import Callback
 from sklearn.preprocessing import MinMaxScaler
 
 def predictPrices(model: Sequential, data: pandas.DataFrame, timesteps: int = 40) -> numpy.ndarray:

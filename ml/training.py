@@ -1,3 +1,4 @@
+import multiprocessing
 import numpy
 import pandas
 import psutil
@@ -34,7 +35,7 @@ def train(symbol: str, days: int, interval: str = "1d", timesteps: int = 60) -> 
 def train(data: pandas.DataFrame, timesteps: int = 40, label: str = "Unknown") -> Sequential | None:
     try:
         # Configure model
-        log("Configuring model...")
+        log("Configuring model... Process:", multiprocessing.current_process().name)
 
         trainingRatio = 0.8 # What % of data to use for training
 
