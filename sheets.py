@@ -13,33 +13,36 @@ import platform
 from env import sheetsId
 from ml.stocklist import stocklist
 
-try:
-    # If modifying these scopes, delete the file token.json.
-    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+# try:
+#     # If modifying these scopes, delete the file token.json.
+#     SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-    creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file('sheetscreds.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+#     creds = None
+#     # The file token.json stores the user's access and refresh tokens, and is
+#     # created automatically when the authorization flow completes for the first
+#     # time.
+#     if os.path.exists('token.json'):
+#         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+#     # If there are no (valid) credentials available, let the user log in.
+#     if not creds or not creds.valid:
+#         if creds and creds.expired and creds.refresh_token:
+#             creds.refresh(Request())
+#         else:
+#             flow = InstalledAppFlow.from_client_secrets_file('sheetscreds.json', SCOPES)
+#             creds = flow.run_local_server(port=0)
+#         # Save the credentials for the next run
+#         with open('token.json', 'w') as token:
+#             token.write(creds.to_json())
 
-    service = build('sheets', 'v4', credentials=creds)
-except RefreshError:
-    print("Error refreshing sheets token. Try deleting token.json and reauthorizing the application. Exiting...")
-    exit()
+#     service = build('sheets', 'v4', credentials=creds)
+# except RefreshError:
+#     print("Error refreshing sheets token. Try deleting token.json and reauthorizing the application. Exiting...")
+#     exit()
 
 def log(msg: str, waitForRam: bool = True) -> None:
+    print(msg)
+    return
+
     try:
         print("[LS]:", msg)
 
@@ -59,6 +62,8 @@ def log(msg: str, waitForRam: bool = True) -> None:
         print("Error logging to sheets: " + str(e))
 
 def insertRowAtTop(sheetId: str) -> None:
+    return
+
     requestBody = {
         "requests": [
             {
@@ -79,6 +84,8 @@ def insertRowAtTop(sheetId: str) -> None:
     request.execute()
 
 def sort(sheetId: str, sortCol: int) -> None:
+    return
+
     requestBody = {
         "requests": [
             {
@@ -105,6 +112,8 @@ def sort(sheetId: str, sortCol: int) -> None:
     request.execute()
 
 def write(range: str, values: list[list[str]]) -> None:
+    return
+
     requestBody = {
         "range": range,
         "majorDimension": "ROWS",
@@ -116,10 +125,14 @@ def write(range: str, values: list[list[str]]) -> None:
     request.execute()
 
 def read(range: str) -> list[list[str]]:
+    return
+
     res = service.spreadsheets().values().get(spreadsheetId=sheetsId, range=range).execute()
     return res.get('values', [])
 
 def logTransaction(symbol: str, id: UUID, event: str, shares: float | str, price: float | str) -> None:
+    return
+
     try:
         if shares is float and price is float:
             totalPrice = round(shares * price, 2)
@@ -140,6 +153,8 @@ def logTransaction(symbol: str, id: UUID, event: str, shares: float | str, price
         print("Error logging to sheets: " + str(e))
 
 def isTransactionOpen() -> bool:
+    return False
+
     try:
         res = read("Journal!D2:D2")
         if res is not None and len(res) > 0:
@@ -150,6 +165,8 @@ def isTransactionOpen() -> bool:
         return False
     
 def getTransactionJournalRow(symbol: str) -> int | None:
+    return
+
     try:
         res = read("Journal!A2:H" + str(len(stocklist)))
         if res is not None and len(res) > 0:

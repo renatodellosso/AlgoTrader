@@ -37,7 +37,8 @@ async def updateHandler(data: RawData) -> None:
         for callback in tradeCallbacks:
             # I have no clue why this is necessary, but it is
             while type(callback) is list:
-                callback = callback[0]
+                if len(callback) > 0:
+                    callback = callback[0]
             callback(data, sharedData)
     except Exception as e:
         print("Error running trade callbacks: " + str(e))

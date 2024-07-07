@@ -17,7 +17,8 @@ class ModelCallback(keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         print("\nEpoch " + str(epoch) + " done!\n\tLabel: " + self.label + "\n\tRAM Usage: " + \
             str(round(psutil.Process().memory_info().rss/ 1024 ** 2)) + " mb \n\tTotal RAM Usage: " + \
-            str(round(psutil.virtual_memory().percent, 1)) + "%")
+            str(round(psutil.virtual_memory().percent, 1)) + "%\n\tCPU Usage: " + \
+            str(psutil.cpu_percent()) + "%")
         if(epoch % 10 == 0):
             print("Epoch " + str(epoch) + " done!")
 
