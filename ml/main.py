@@ -1,4 +1,4 @@
-from trading import startLoop
+from trading import dailyTrade
 import sys
 sys.path.append('../AlgoTrader')
 from sheets import log
@@ -9,5 +9,5 @@ from stocklist import stocklist
 if(__name__ == "__main__"):
     log("Starting main process...")
     startStreamProcess()
-    startLoop()
+    dailyTrade()
     exit()
