@@ -9,5 +9,9 @@ for line in envFile:
         alpacaSecret = splitLine[1].strip()
     elif splitLine[0] == "SHEETS_ID":
         sheetsId = splitLine[1].strip()
+    elif splitLine[0] == "BOT_TOKEN":
+        botToken = splitLine[1].strip()
+    elif splitLine[0] == "BOT_CHANNEL_ID":
+        botChannelId = splitLine[1].strip()
 
 envFile.close()

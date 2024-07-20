@@ -14,6 +14,7 @@ from sheets import log, logTransaction
 from predicting import getChange, getChangeTuple, predictPrices
 from training import train
 from stocklist import stocklist
+from exitflag import exitFlag
 
 symbols = stocklist
 days = 365 * 10 # 10 years works well
@@ -21,6 +22,12 @@ timesteps = 40
 
 est = datetime.timezone(datetime.timedelta(hours=-5))
 
+def keyboardExit():
+    log("Keyboard Interrupt!")
+    global exitFlag
+    exitFlag.set()
+    time.sleep(5)
+    exit()
 
 def startLoop() ->  None:
     log("Starting trading loop...")
@@ -53,8 +60,7 @@ def startLoop() ->  None:
             log("Sleeping for 1 hour...")
             time.sleep(3600)
     except KeyboardInterrupt:
-        log("Keyboard Interrupt!")
-        exit()
+        keyboardExit()
     except Exception as e:
         log("Error:" + str(e))
     finally:
@@ -172,8 +178,7 @@ def getPredictedChange(symbol: str) -> float | None:
             try:
                 data = getData(symbol)
             except KeyboardInterrupt:
-                log("Keyboard Interrupt!")
-                exit()
+                keyboardExit()
             except Exception as e:
                 log("Error downloading data for " + symbol + ": " + str(e))
                 time.sleep(60)
@@ -199,8 +204,7 @@ def getPredictedChange(symbol: str) -> float | None:
 
         return diff
     except KeyboardInterrupt:
-        log("Keyboard Interrupt!")
-        exit()
+        keyboardExit()
     except Exception as e:
         log("Error getting predicted prices for " + symbol + ": " + str(e))
         return None
